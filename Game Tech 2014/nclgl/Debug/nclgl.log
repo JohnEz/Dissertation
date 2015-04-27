@@ -1,0 +1,56 @@
+﻿Build started 23/04/2015 11:49:26.
+     1>Project "D:\Storage\Work\Dissertation\Game Tech 2014\nclgl\nclgl.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D GLEW_STATIC /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt Camera.cpp CubeRobot.cpp Frustum.cpp GameTimer.cpp HeightMap.cpp Keyboard.cpp Matrix4.cpp MD5Anim.cpp MD5FileData.cpp MD5Mesh.cpp MD5Node.cpp Mesh.cpp Mouse.cpp OBJMesh.cpp OGLRenderer.cpp Plane.cpp Quaternion.cpp SceneNode.cpp Shader.cpp Text2D.cpp Window.cpp
+         Window.cpp
+         Text2D.cpp
+         Shader.cpp
+         SceneNode.cpp
+         Quaternion.cpp
+         Plane.cpp
+         OGLRenderer.cpp
+         OBJMesh.cpp
+         Mouse.cpp
+         Mesh.cpp
+         MD5Node.cpp
+         MD5Mesh.cpp
+         MD5FileData.cpp
+         MD5Anim.cpp
+         Matrix4.cpp
+         Keyboard.cpp
+         HeightMap.cpp
+         GameTimer.cpp
+         Frustum.cpp
+         CubeRobot.cpp
+         Generating Code...
+         Compiling...
+         Camera.cpp
+         Generating Code...
+       Lib:
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\Lib.exe /OUT:"D:\Storage\Work\Dissertation\Game Tech 2014\Game Technologies\Debug\nclgl.lib" /NOLOGO Debug\Camera.obj
+         Debug\CubeRobot.obj
+         Debug\Frustum.obj
+         Debug\GameTimer.obj
+         Debug\HeightMap.obj
+         Debug\Keyboard.obj
+         Debug\Matrix4.obj
+         Debug\MD5Anim.obj
+         Debug\MD5FileData.obj
+         Debug\MD5Mesh.obj
+         Debug\MD5Node.obj
+         Debug\Mesh.obj
+         Debug\Mouse.obj
+         Debug\OBJMesh.obj
+         Debug\OGLRenderer.obj
+         Debug\Plane.obj
+         Debug\Quaternion.obj
+         Debug\SceneNode.obj
+         Debug\Shader.obj
+         Debug\Text2D.obj
+         Debug\Window.obj
+         nclgl.vcxproj -> D:\Storage\Work\Dissertation\Game Tech 2014\Game Technologies\Debug\nclgl.lib
+     1>Done Building Project "D:\Storage\Work\Dissertation\Game Tech 2014\nclgl\nclgl.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:11.25
