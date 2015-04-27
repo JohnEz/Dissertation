@@ -70,7 +70,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Agent.cpp" />
-    <ClCompile Include="Branch.cpp" />
     <ClCompile Include="CollisionDetector.cpp" />
     <ClCompile Include="ExtendingMesh.cpp" />
     <ClCompile Include="GameClass.cpp" />
@@ -85,12 +84,10 @@
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Spring.cpp" />
-    <ClCompile Include="Stem.cpp" />
     <ClCompile Include="TextMesh.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Agent.h" />
-    <ClInclude Include="Branch.h" />
     <ClInclude Include="CollisionDetector.h" />
     <ClInclude Include="CollisionVolume.h" />
     <ClInclude Include="ExtendingMesh.h" />
@@ -105,7 +102,6 @@
     <ClInclude Include="Player.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Spring.h" />
-    <ClInclude Include="Stem.h" />
     <ClInclude Include="TextMesh.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

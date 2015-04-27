@@ -51,12 +51,6 @@
     <ClCompile Include="Performance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Branch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Stem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MeshStorage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -110,13 +104,7 @@
     <ClInclude Include="ExtendingMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Stem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MeshStorage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Branch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Agent.h">

@@ -1,5 +1,5 @@
-﻿Build started 23/04/2015 11:49:26.
-     1>Project "D:\Storage\Work\Dissertation\Game Tech 2014\nclgl\nclgl.vcxproj" on node 2 (Build target(s)).
+﻿Build started 27/04/2015 12:30:07.
+     1>Project "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\nclgl\nclgl.vcxproj" on node 2 (Build target(s)).
      1>ClCompile:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D GLEW_STATIC /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt Camera.cpp CubeRobot.cpp Frustum.cpp GameTimer.cpp HeightMap.cpp Keyboard.cpp Matrix4.cpp MD5Anim.cpp MD5FileData.cpp MD5Mesh.cpp MD5Node.cpp Mesh.cpp Mouse.cpp OBJMesh.cpp OGLRenderer.cpp Plane.cpp Quaternion.cpp SceneNode.cpp Shader.cpp Text2D.cpp Window.cpp
          Window.cpp
@@ -27,7 +27,7 @@
          Camera.cpp
          Generating Code...
        Lib:
-         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\Lib.exe /OUT:"D:\Storage\Work\Dissertation\Game Tech 2014\Game Technologies\Debug\nclgl.lib" /NOLOGO Debug\Camera.obj
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\Lib.exe /OUT:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\nclgl.lib" /NOLOGO Debug\Camera.obj
          Debug\CubeRobot.obj
          Debug\Frustum.obj
          Debug\GameTimer.obj
@@ -48,9 +48,9 @@
          Debug\Shader.obj
          Debug\Text2D.obj
          Debug\Window.obj
-         nclgl.vcxproj -> D:\Storage\Work\Dissertation\Game Tech 2014\Game Technologies\Debug\nclgl.lib
-     1>Done Building Project "D:\Storage\Work\Dissertation\Game Tech 2014\nclgl\nclgl.vcxproj" (Build target(s)).
+         nclgl.vcxproj -> D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\nclgl.lib
+     1>Done Building Project "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\nclgl\nclgl.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:11.25
+Time Elapsed 00:00:11.24

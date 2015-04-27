@@ -24,6 +24,7 @@ _-_-_-_-_-_-_-""  ""
 #include "PhysicsSystem.h"
 #include "GameEntity.h"
 #include "Agent.h"
+#include "Player.h"
 
 #include <vector>
 
@@ -50,6 +51,7 @@ protected:
 
 	vector<GameEntity*> allEntities;
 	vector<Agent*> allAgents;
+	Player* allPlayers[Player::MAX_PLAYERS];
 
 	Camera* gameCamera;
 	static GameClass* instance;

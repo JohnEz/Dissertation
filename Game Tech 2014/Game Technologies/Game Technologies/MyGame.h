@@ -63,7 +63,9 @@ protected:
 
 	GameEntity* BuildStemEntity(Vector3 pos);
 
-	Agent* AddAgent(const Vector3 pos);
+	Agent* BuildAgent(const Vector3 pos);
+
+	Player* BuildPlayer(const Vector3 pos);
 
 	bool oldState;
 	bool currentState;

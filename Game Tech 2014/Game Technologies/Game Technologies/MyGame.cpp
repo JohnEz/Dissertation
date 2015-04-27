@@ -40,12 +40,19 @@ MyGame::MyGame()	{
 
 	//allEntities.push_back(BuildFloatSphereEntity(100.0f, Vector3(200, 300, 156)));
 
-	//allEntities.push_back(BuildStemEntity(Vector3(0, 250, 0)));
-	allAgents.push_back(AddAgent(Vector3(0, 250, 0)));
-	//allAgents.push_back(AddAgent(Vector3(100, 250, 100)));
-	//allAgents.push_back(AddAgent(Vector3(200, 250, 400)));
-	//allAgents.push_back(AddAgent(Vector3(300, 250, 300)));
-	//allAgents.push_back(AddAgent(Vector3(400, 250, 200)));
+
+	allAgents.push_back(BuildAgent(Vector3(0, 250, 0)));
+	//allAgents.push_back(BuildAgent(Vector3(100, 250, 100)));
+	//allAgents.push_back(BuildAgent(Vector3(200, 250, 400)));
+	//allAgents.push_back(BuildAgent(Vector3(300, 250, 300)));
+	//allAgents.push_back(BuildAgent(Vector3(400, 250, 200)));
+
+	for (int i = 0; i < Player::MAX_PLAYERS; ++i)
+	{
+		allPlayers[i] = NULL;
+	}
+
+	allPlayers[0] = BuildPlayer(Vector3(100, 100, 100));
 
 
 }
@@ -79,7 +86,7 @@ void MyGame::UpdateGame(float msec) {
 
 	//update all the agents
 	for(vector<Agent*>::iterator i = allAgents.begin(); i != allAgents.end(); ++i) {
-		(*i)->Update(msec);
+		(*i)->Update(allPlayers, msec);
 	}
 
 	oldState = currentState;
@@ -104,38 +111,28 @@ void MyGame::UpdateGame(float msec) {
 		allEntities.push_back(BuildSphereEntity(sphereSize, gameCamera->GetPosition(), norm * speed));
 	}
 
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_E))
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))
 	{
-		sphereSize += 0.05f * msec;
-		if (sphereSize > 100.0f)
-		{
-			sphereSize = 100.0f;
-		}
-	}
-	else if (Window::GetKeyboard()->KeyDown(KEYBOARD_Q))
-	{
-		sphereSize -= 0.05f * msec;
-		if (sphereSize < 10.0f)
-		{
-			sphereSize = 10.0f;
-		}
+		Vector3 newPos = allPlayers[0]->physicsNode->GetPosition() + (Vector3(1, 0, 0) * msec);
+		allPlayers[0]->physicsNode->SetPosition(newPos);
 	}
 
-	if (Window::GetMouse()->ButtonDown(MOUSE_RIGHT))
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_RIGHT))
 	{
-		speed += 0.0005f * msec;
-		if (speed > 3.0f)
-		{
-			speed = 3.0f;
-		}
+		Vector3 newPos = allPlayers[0]->physicsNode->GetPosition() + (Vector3(0, 0, 1) * msec);
+		allPlayers[0]->physicsNode->SetPosition(newPos);
 	}
-	else if (Window::GetMouse()->ButtonDown(MOUSE_MIDDLE))
+
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_LEFT))
 	{
-		speed -= 0.0005f * msec;
-		if (speed < 0.5f)
-		{
-			speed = 0.5f;
-		}
+		Vector3 newPos = allPlayers[0]->physicsNode->GetPosition() + (Vector3(0, 0, -1) * msec);
+		allPlayers[0]->physicsNode->SetPosition(newPos);
+	}
+
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_DOWN))
+	{
+		Vector3 newPos = allPlayers[0]->physicsNode->GetPosition() + (Vector3(-1, 0, 0) * msec);
+		allPlayers[0]->physicsNode->SetPosition(newPos);
 	}
 
 	/*
@@ -342,33 +339,7 @@ GameEntity* MyGame::BuildLeafEntity(float radius) {
 	return g;
 }
 
-GameEntity* MyGame::BuildStemEntity(Vector3 pos) {
-	PhysicsNode*p = new PhysicsNode();
-
-	float elements[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-	Matrix4 mat = Matrix4(elements);
-	p->SetInverseInertia(mat);
-	p->SetUseGravity(false);
-	p->SetPosition(pos);
-	p->SetInverseMass(0.0f);
-
-	Vector3 endPos = pos;
-	endPos.y += 200;
-
-	p->SetCollisionVolume(new CollisionCylinder(1.5f, pos, endPos));
-
-	SceneNode* s = new Stem(p);
-
-	s->SetModelScale(Vector3(10,10,10));
-	s->SetBoundingRadius(1);
-	s->SetColour(Vector4(0,1,1,1));
-
-	GameEntity*g = new GameEntity(s, p);
-	g->ConnectToSystems();
-	return g;
-}
-
-Agent* MyGame::AddAgent(const Vector3 pos)
+Agent* MyGame::BuildAgent(const Vector3 pos)
 {
 	PhysicsNode*p = new PhysicsNode();
 
@@ -392,6 +363,34 @@ Agent* MyGame::AddAgent(const Vector3 pos)
 	s->SetColour(Vector4(0,0,1,1));
 
 	Agent* a = new Agent(s, p);
+	a->ConnectToSystems();
+	return a;
+}
+
+Player* MyGame::BuildPlayer(const Vector3 pos)
+{
+	PhysicsNode*p = new PhysicsNode();
+
+	p->SetPosition(pos);
+	p->SetLinearVelocity(Vector3(0, 0, 0));
+	p->SetAngularVelocity(Vector3(0, 0, 0));
+
+	float I = 2.5f/(1.0f*25.0f*25.0f);
+	float elements[] = {I, 0, 0, 0, 0, I, 0, 0, 0, 0, I, 0, 0, 0, 0, 1};
+	Matrix4 mat = Matrix4(elements);
+	p->SetInverseInertia(mat);
+
+	p->SetInverseMass(1.0f);
+
+	p->SetCollisionVolume(new CollisionSphere(25.0f));
+
+	SceneNode* s = new SceneNode(sphere);
+
+	s->SetModelScale(Vector3(25.0f,25.0f,25.0f));
+	s->SetBoundingRadius(25.0f);
+	s->SetColour(Vector4(0,0,1,1));
+
+	Player* a = new Player(s, p);
 	a->ConnectToSystems();
 	return a;
 }

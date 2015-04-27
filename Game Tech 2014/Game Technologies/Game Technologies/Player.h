@@ -9,6 +9,15 @@
 class Player
 {
 public:
+	static const int MAX_PLAYERS = 1000;
+
+	int level;
+	bool isDead;
+	
+	//entity variables
+	SceneNode*		renderNode;
+	PhysicsNode*	physicsNode;
+	bool removed;
 
 	Player(SceneNode* s, PhysicsNode* p);
 	~Player(void){};
@@ -19,12 +28,5 @@ public:
 	void	DisconnectFromSystems();
 
 protected:
-	int level;
-	bool isDead;
-	
-	//entity variables
-	SceneNode*		renderNode;
-	PhysicsNode*	physicsNode;
 
-	bool removed;
 };

@@ -5,12 +5,14 @@
 #include "PhysicsNode.h"
 #include "Renderer.h"
 #include "PhysicsSystem.h"
+#include "Player.h"
 
 enum AgentState {
 	PATROL,
 	STARE_AT_PLAYER,
 	CHASE_PLAYER,
 	USE_ABILITY,
+	LEASH,
 	MAX_STATES
 };
 
@@ -23,12 +25,12 @@ class Agent
 {
 public:
 
-	const int PATROLSIZE = 3;
+	static const int PATROLSIZE = 3;
 
 	Agent(SceneNode* s, PhysicsNode* p);
 	~Agent(void){};
 
-	void	Update(float msec);
+	void	Update(Player* players[], float msec);
 
 	void	ConnectToSystems();
 	void	DisconnectFromSystems();
@@ -39,6 +41,7 @@ protected:
 	HierarchicalState myState;
 	int targetLocation;
 	Vector3 patrolLocations[PATROLSIZE];
+	Player* targetPlayer;
 
 	//entity variables
 	SceneNode*		renderNode;

@@ -2,29 +2,32 @@
 
 const float MAXSPEED = 1.0f;
 const int PATROLSIZE = 3;
+const float MAXAGGRORANGE = 400.0f;
+const float ATTACKRANGE = 10.0f;
+const float LEASHRANGE = 1600.0f;
 
-void (*states[MAX_STATES]) (AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode* physicsNode, float msec);
+void (*states[MAX_STATES]) (Player* players[], Player** targetPlayer, AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode* physicsNode, float msec);
 
 
 template <typename T> int sgn(T val) {
 	return (T(0) < val) - (val < T(0));
 }
 
-Vector3 GenerateTargetLocation()
+Vector3 GenerateTargetLocation(const Vector3& position)
 {
-	Vector3 target = Vector3(0,0,0);
+	Vector3 target = position;
 
-	target.x = (rand() % 4000) - 2000;
-	target.z = (rand() % 4000) - 2000;
+	target.x += (rand() % 4000) - 2000;
+	target.z += (rand() % 4000) - 2000;
 
 	return target;
 }
 
-void Patrol(AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode* physicsNode, float msec)
+void Patrol(Player* players[], Player** targetPlayer, AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode* pNode, float msec)
 {
 	//at target
-	float disX = target[currentTarget].x - physicsNode->GetPosition().x;
-	float disZ = target[currentTarget].z - physicsNode->GetPosition().z;
+	float disX = target[currentTarget].x - pNode->GetPosition().x;
+	float disZ = target[currentTarget].z - pNode->GetPosition().z;
 	float absX = abs(disX);
 	float absZ = abs(disZ);
 
@@ -45,28 +48,109 @@ void Patrol(AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode
 		moveX = min(moveX, absX);
 		moveZ = min(moveZ, absZ);
 
-		Vector3 newPos = Vector3(physicsNode->GetPosition().x + (moveX * sgn<float>(disX)), physicsNode->GetPosition().y, physicsNode->GetPosition().z + (moveZ * sgn<float>(disZ)));
+		Vector3 newPos = Vector3(pNode->GetPosition().x + (moveX * sgn<float>(disX)), pNode->GetPosition().y, pNode->GetPosition().z + (moveZ * sgn<float>(disZ)));
 
-		physicsNode->SetPosition(newPos);
+		pNode->SetPosition(newPos);
 	}
 
-	//add state transitions here
-	//if player close transition state to stare at player
+	//state transition
+	int i = 0;
+	while (i < Player::MAX_PLAYERS && players[i] != NULL)
+	{
+		//calculate distance to player
+		Vector3 diff = players[i]->physicsNode->GetPosition() - pNode->GetPosition();
+		float dist = sqrtf(Vector3::Dot(diff, diff));
+
+		//if player close transition state to stare at player
+		if (dist < MAXAGGRORANGE) //add calculation including level
+		{
+			state = STARE_AT_PLAYER; //change state
+			target[2] = pNode->GetPosition(); //set position it left patrol
+			*targetPlayer = players[i]; // the player that is aggroing
+			i = Player::MAX_PLAYERS; // exit the loop
+		}
+		i++;
+	}
+
 }
 
-void stareAtPlayer(AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode* physicsNode, float msec)
+void stareAtPlayer(Player* players[], Player** targetPlayer, AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode* pNode, float msec)
 {
 	//stop and face the player
 	//if player gets closer statechange to chase player
+	int i = 0;
+	while (i < Player::MAX_PLAYERS && players[i] != NULL)
+	{
+		//calculate distance to player
+		Vector3 diff = players[i]->physicsNode->GetPosition() - pNode->GetPosition();
+		float dist = sqrtf(Vector3::Dot(diff, diff));
+
+		//if player close transition state to stare at player
+		if (dist < (MAXAGGRORANGE * 0.75f)) //add calculation including level
+		{
+			state = CHASE_PLAYER;
+			i = Player::MAX_PLAYERS;
+			*targetPlayer = players[i]; // the player that is aggroing
+		}
+		else if (dist > MAXAGGRORANGE) //add calculation including level
+		{
+			state = PATROL;
+			i = Player::MAX_PLAYERS;
+		}
+
+		i++;
+	}
 	//if player gets further away resume patrol
 }
 
-void chasePlayer(AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode* physicsNode, float msec)
+void chasePlayer(Player* players[], Player** targetPlayer, AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode* pNode, float msec)
 {
+	//calculate distance to leash spot
+	Vector3 leashDiff = target[2] - pNode->GetPosition();
+	float leashDist = sqrtf(Vector3::Dot(leashDiff, leashDiff));
+
+	if (leashDist > LEASHRANGE)
+	{
+		state = LEASH;
+	}
+	else
+	{
+		//calculate distance to player
+		Vector3 diff = (*targetPlayer)->physicsNode->GetPosition() - pNode->GetPosition();
+		float dist = sqrtf(Vector3::Dot(diff, diff));
+
+		//if close to player switch state to useability
+		if (dist < ATTACKRANGE)
+		{
+			state = USE_ABILITY;
+		}
+	}
+
+
 	//move towards players location
-	//if close to player switch state to useability
-	//if i am too far away from my patrol point, leash
+	float disX = (*targetPlayer)->physicsNode->GetPosition().x - pNode->GetPosition().x;
+	float disZ = (*targetPlayer)->physicsNode->GetPosition().z - pNode->GetPosition().z;
+	float absX = abs(disX);
+	float absZ = abs(disZ);
+
+	//move to target
+	float dis = absX + absZ;
+	float moveX = ((absX / dis) * MAXSPEED) * msec;
+	float moveZ = ((absZ / dis) * MAXSPEED) * msec;
+
+	moveX = min(moveX, absX);
+	moveZ = min(moveZ, absZ);
+
+	Vector3 newPos = Vector3(pNode->GetPosition().x + (moveX * sgn<float>(disX)), pNode->GetPosition().y, pNode->GetPosition().z + (moveZ * sgn<float>(disZ)));
+
+	pNode->SetPosition(newPos);
 }
+
+void leashBack(Player* players[], Player** targetPlayer, AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode* pNode, float msec)
+{
+
+}
+
 
 Agent::Agent(SceneNode* s, PhysicsNode* p) {
 	renderNode	= s;
@@ -77,19 +161,22 @@ Agent::Agent(SceneNode* s, PhysicsNode* p) {
 	subState = PATROL;
 	states[PATROL] = Patrol;
 	states[STARE_AT_PLAYER] = stareAtPlayer;
+	states[CHASE_PLAYER] = chasePlayer;
+	states[LEASH] = leashBack;
 
 	targetLocation = 0;
-	patrolLocations[0] = GenerateTargetLocation();  // start patrol
-	patrolLocations[1] = GenerateTargetLocation();  // end patrol
+	patrolLocations[0] = GenerateTargetLocation(physicsNode->GetPosition());  // start patrol
+	patrolLocations[1] = GenerateTargetLocation(physicsNode->GetPosition());  // end patrol
 	patrolLocations[2] = Vector3(0, 0, 0);			// store location
-	
+
 
 }
 
-void Agent::Update(float msec)
+void Agent::Update(Player* players[], float msec)
 {
+	targetPlayer = players[0];
 	//run the relevant state
-	states[subState](subState, targetLocation, patrolLocations, physicsNode, msec);
+	states[subState](players, &targetPlayer, subState, targetLocation, patrolLocations, physicsNode, msec);
 }
 
 void Agent::ConnectToSystems() {
