@@ -2,6 +2,8 @@
 
 bool CollisionDetector::SphereSphereCollision(PhysicsNode& p0, PhysicsNode& p1, CollisionData* data) {
 	
+	return false;
+
 	//get the collision data
 	CollisionSphere& s0 = *(CollisionSphere*)p0.GetCollisionVolume();
 	CollisionSphere& s1 = *(CollisionSphere*)p1.GetCollisionVolume();

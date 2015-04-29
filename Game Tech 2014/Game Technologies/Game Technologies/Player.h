@@ -20,6 +20,7 @@ public:
 	bool removed;
 
 	Player(SceneNode* s, PhysicsNode* p);
+	Player(){};
 	~Player(void){};
 
 	void	Update(float msec);

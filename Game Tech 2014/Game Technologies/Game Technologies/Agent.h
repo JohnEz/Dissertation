@@ -21,11 +21,19 @@ enum HierarchicalState {
 	AGGROD
 };
 
+struct Ability {
+	float maxCooldown;
+	float cooldown;
+	int damage;
+	bool targetEnemy;
+};
+
 class Agent
 {
 public:
 
 	static const int PATROLSIZE = 3;
+	static const int MAXABILITIES = 3;
 
 	Agent(SceneNode* s, PhysicsNode* p);
 	~Agent(void){};
@@ -40,8 +48,9 @@ protected:
 	AgentState subState;
 	HierarchicalState myState;
 	int targetLocation;
-	Vector3 patrolLocations[PATROLSIZE];
+	Vector3* patrolLocations[PATROLSIZE];
 	Player* targetPlayer;
+	Ability* myAbilities[MAXABILITIES];
 
 	//entity variables
 	SceneNode*		renderNode;
