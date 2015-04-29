@@ -148,7 +148,32 @@ void chasePlayer(Player* players[], Player** targetPlayer, AgentState& state, in
 
 void leashBack(Player* players[], Player** targetPlayer, AgentState& state, int& currentTarget, Vector3 target[], PhysicsNode* pNode, float msec)
 {
+	//at target
+	float disX = target[2].x - pNode->GetPosition().x;
+	float disZ = target[2].z - pNode->GetPosition().z;
+	float absX = abs(disX);
+	float absZ = abs(disZ);
 
+	//check its close enough to the point (can lower the numbers when collision is removed)
+	if (absX < 10.1f && absZ < 10.1f)
+	{
+		//change back to patrol
+		state = PATROL;
+	}
+	else
+	{
+		//move to target
+		float dis = absX + absZ;
+		float moveX = ((absX / dis) * MAXSPEED) * msec;
+		float moveZ = ((absZ / dis) * MAXSPEED) * msec;
+
+		moveX = min(moveX, absX);
+		moveZ = min(moveZ, absZ);
+
+		Vector3 newPos = Vector3(pNode->GetPosition().x + (moveX * sgn<float>(disX)), pNode->GetPosition().y, pNode->GetPosition().z + (moveZ * sgn<float>(disZ)));
+
+		pNode->SetPosition(newPos);
+	}
 }
 
 
