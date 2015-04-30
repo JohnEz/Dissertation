@@ -12,7 +12,7 @@ You can completely change all of this if you want, it's your game!
 */
 
 MyGame::MyGame()	{
-	gameCamera = new Camera(-30.0f,0.0f,Vector3(0,450,850));
+	gameCamera = new Camera(0.0f, 3.142f / 2,Vector3(0,5000,0));
 
 	Renderer::GetRenderer().SetCamera(gameCamera);
 
@@ -41,11 +41,21 @@ MyGame::MyGame()	{
 	//allEntities.push_back(BuildFloatSphereEntity(100.0f, Vector3(200, 300, 156)));
 
 
-	allAgents.push_back(BuildAgent(Vector3(0, 250, 0)));
-	//allAgents.push_back(BuildAgent(Vector3(100, 250, 100)));
-	//allAgents.push_back(BuildAgent(Vector3(200, 250, 400)));
-	//allAgents.push_back(BuildAgent(Vector3(300, 250, 300)));
-	//allAgents.push_back(BuildAgent(Vector3(400, 250, 200)));
+	/*allAgents.push_back(BuildAgent(Vector3(0, 250, 0)));
+	allAgents.push_back(BuildAgent(Vector3(100, 250, 100)));
+	allAgents.push_back(BuildAgent(Vector3(200, 250, 400)));
+	allAgents.push_back(BuildAgent(Vector3(300, 250, 300)));
+	allAgents.push_back(BuildAgent(Vector3(400, 250, 200)));*/
+
+	for (int i = 0; i < 1000; ++i)
+	{
+		int x, y, z;
+
+		x = (rand() % 10000) - 5000;
+		y = 100;
+		z = (rand() % 10000) - 5000;
+		allAgents.push_back(BuildAgent(Vector3(x, y, z))); 
+	}
 
 	for (int i = 0; i < Player::MAX_PLAYERS; ++i)
 	{
@@ -53,6 +63,8 @@ MyGame::MyGame()	{
 	}
 
 	allPlayers[0] = BuildPlayer(Vector3(100, 100, 100));
+	allPlayers[1] = BuildPlayer(Vector3(200, 200, 2000));
+	allPlayers[2] = BuildPlayer(Vector3(3000, 100, 300));
 
 
 }
@@ -87,6 +99,15 @@ void MyGame::UpdateGame(float msec) {
 	//update all the agents
 	for(vector<Agent*>::iterator i = allAgents.begin(); i != allAgents.end(); ++i) {
 		(*i)->Update(allPlayers, msec);
+	}
+
+	//update all the players
+	for (int i = 0; i < Player::MAX_PLAYERS; ++i)
+	{
+		if (allPlayers[i] != NULL)
+		{
+			allPlayers[i]->Update(msec);
+		}
 	}
 
 	oldState = currentState;
@@ -388,9 +409,9 @@ Player* MyGame::BuildPlayer(const Vector3 pos)
 
 	s->SetModelScale(Vector3(25.0f,25.0f,25.0f));
 	s->SetBoundingRadius(25.0f);
-	s->SetColour(Vector4(0,0,1,1));
+	s->SetColour(Vector4(1,0,0,1));
 
-	Player* a = new Player(s, p);
+	Player* a = new Player(s, p, 8, 10000);
 	a->ConnectToSystems();
 	return a;
 }

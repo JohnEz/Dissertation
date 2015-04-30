@@ -43,7 +43,7 @@ public:
 	void	ConnectToSystems();
 	void	DisconnectFromSystems();
 
-protected:
+//protected:
 	//FSM variables
 	AgentState subState;
 	HierarchicalState myState;
@@ -51,6 +51,7 @@ protected:
 	Vector3* patrolLocations[PATROLSIZE];
 	Player* targetPlayer;
 	Ability* myAbilities[MAXABILITIES];
+	int level;
 
 	//entity variables
 	SceneNode*		renderNode;

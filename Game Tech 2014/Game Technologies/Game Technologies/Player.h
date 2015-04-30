@@ -12,6 +12,8 @@ public:
 	static const int MAX_PLAYERS = 1000;
 
 	int level;
+	int hp;
+	int maxHP;
 	bool isDead;
 	
 	//entity variables
@@ -19,7 +21,7 @@ public:
 	PhysicsNode*	physicsNode;
 	bool removed;
 
-	Player(SceneNode* s, PhysicsNode* p);
+	Player(SceneNode* s, PhysicsNode* p, int lvl, int health);
 	Player(){};
 	~Player(void){};
 

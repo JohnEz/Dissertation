@@ -1,4 +1,6 @@
 #include "Performance.h"
+#include <stdio.h>
+
 
 //sets instance pointer to null
 Performance* Performance::pInst = 0;
@@ -43,6 +45,7 @@ void Performance::calculateFPS(float msec)
 		currentTimeFPS = 0;
 
 		frameCountFPS = 0;
+
 	}
 }
 
@@ -59,5 +62,7 @@ void Performance::calculatePPS(float msec)
 		currentTimePPS = 0;
 
 		frameCountPPS = 0;
+
+		printf("f[s: %4.2f \n", fps);
 	}
 }

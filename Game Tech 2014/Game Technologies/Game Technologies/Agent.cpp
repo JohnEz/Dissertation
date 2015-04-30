@@ -3,11 +3,12 @@
 const float MAXSPEED = 1.0f;
 const int PATROLSIZE = 3;
 const int MAXABILITIES = 3;
-const float MAXAGGRORANGE = 400.0f;
+const float MAXAGGRORANGE = 1000.0f;
 const float ATTACKRANGE = 75.0f;
 const float LEASHRANGE = 3200.0f;
 
-void (*states[MAX_STATES]) (Player* players[], Player& targetPlayer, AgentState& state, int& currentTarget, Vector3* target[], PhysicsNode& pNode, Ability* abilities[], float msec);
+//void (*states[MAX_STATES]) (Player* players[], Player& targetPlayer, AgentState& state, int& currentTarget, Vector3* target[], PhysicsNode& pNode, Ability* abilities[], Agent& a, float msec);
+void (*states[MAX_STATES]) (Player* players[], Agent& a, float msec);
 
 
 template <typename T> int sgn(T val) {
@@ -26,20 +27,20 @@ Vector3* GenerateTargetLocation(const Vector3& position)
 	return target;
 }
 
-void Patrol(Player* players[], Player& targetPlayer, AgentState& state, int& currentTarget, Vector3* target[], PhysicsNode& pNode, Ability* abilities[], float msec)
+void Patrol(Player* players[], Agent& a, float msec)
 {
 	//at target
-	float disX = target[currentTarget]->x - pNode.GetPosition().x;
-	float disZ = target[currentTarget]->z - pNode.GetPosition().z;
+	float disX = a.patrolLocations[a.targetLocation]->x - a.physicsNode->GetPosition().x;
+	float disZ = a.patrolLocations[a.targetLocation]->z - a.physicsNode->GetPosition().z;
 	float absX = abs(disX);
 	float absZ = abs(disZ);
 
-	//check its close enough to the point (can lower the numbers when collision is removed)
-	if (absX < 10.1f && absZ < 10.1f)
+	//check its close enough to the point
+	if (absX < 0.1f && absZ < 0.1f)
 	{
 		//get new target
-		currentTarget++;
-		currentTarget = currentTarget % 2; //need to fix this
+		a.targetLocation++;
+		a.targetLocation = a.targetLocation % 2; //need to fix this
 	}
 	else
 	{
@@ -51,9 +52,9 @@ void Patrol(Player* players[], Player& targetPlayer, AgentState& state, int& cur
 		moveX = min(moveX, absX);
 		moveZ = min(moveZ, absZ);
 
-		Vector3 newPos = Vector3(pNode.GetPosition().x + (moveX * sgn<float>(disX)), pNode.GetPosition().y, pNode.GetPosition().z + (moveZ * sgn<float>(disZ)));
+		Vector3 newPos = Vector3(a.physicsNode->GetPosition().x + (moveX * sgn<float>(disX)), a.physicsNode->GetPosition().y, a.physicsNode->GetPosition().z + (moveZ * sgn<float>(disZ)));
 
-		pNode.SetPosition(newPos);
+		a.physicsNode->SetPosition(newPos);
 	}
 
 	//state transition
@@ -61,15 +62,15 @@ void Patrol(Player* players[], Player& targetPlayer, AgentState& state, int& cur
 	while (i < Player::MAX_PLAYERS && players[i] != NULL)
 	{
 		//calculate distance to player
-		Vector3 diff = players[i]->physicsNode->GetPosition() - pNode.GetPosition();
+		Vector3 diff = players[i]->physicsNode->GetPosition() - a.physicsNode->GetPosition();
 		float dist = sqrtf(Vector3::Dot(diff, diff));
 
 		//if player close transition state to stare at player
-		if (dist < MAXAGGRORANGE) //add calculation including level
+		if (dist < MAXAGGRORANGE * (a.level / players[i]->level) && !players[i]->isDead)
 		{
-			state = STARE_AT_PLAYER; //change state
-			*target[2] = pNode.GetPosition(); //set position it left patrol
-			targetPlayer = *players[i]; // the player that is aggroing
+			a.subState = STARE_AT_PLAYER; //change state
+			*a.patrolLocations[2] = a.physicsNode->GetPosition(); //set position it left patrol
+			a.targetPlayer = players[i]; // playing that is being stared at
 			i = Player::MAX_PLAYERS; // exit the loop
 		}
 		i++;
@@ -77,90 +78,104 @@ void Patrol(Player* players[], Player& targetPlayer, AgentState& state, int& cur
 
 }
 
-void stareAtPlayer(Player* players[], Player& targetPlayer, AgentState& state, int& currentTarget, Vector3* target[], PhysicsNode& pNode, Ability* abilities[], float msec)
+void stareAtPlayer(Player* players[], Agent& a, float msec)
 {
-	//stop and face the player
-	//if player gets closer statechange to chase player
-	int i = 0;
-	while (i < Player::MAX_PLAYERS && players[i] != NULL)
+	//calculate distance to player
+	Vector3 diff = a.targetPlayer->physicsNode->GetPosition() - a.physicsNode->GetPosition();
+	float dist = sqrtf(Vector3::Dot(diff, diff));
+
+	if (dist < (MAXAGGRORANGE * 0.75f) * (a.level / a.targetPlayer->level) && !a.targetPlayer->isDead) // if the player is in pull range
 	{
-		//calculate distance to player
-		Vector3 diff = players[i]->physicsNode->GetPosition() - pNode.GetPosition();
-		float dist = sqrtf(Vector3::Dot(diff, diff));
+		a.subState = CHASE_PLAYER;
+	}
+	else
+	{
+		bool playerClose = false;
+		int i = 0;
 
-		//if player close transition state to stare at player
-		if (dist < (MAXAGGRORANGE * 0.75f)) //add calculation including level
+		while (i < Player::MAX_PLAYERS && players[i] != NULL && !players[i]->isDead)
 		{
-			state = CHASE_PLAYER;
-			targetPlayer = *players[i]; // the player that is aggroing
-			i = Player::MAX_PLAYERS;
-		}
-		else if (dist > MAXAGGRORANGE) //add calculation including level
-		{
-			state = PATROL;
-			i = Player::MAX_PLAYERS;
+			//calculate distance to player
+			Vector3 diffNew = players[i]->physicsNode->GetPosition() - a.physicsNode->GetPosition();
+			float distNew = sqrtf(Vector3::Dot(diffNew, diffNew));
+
+			if (distNew <= dist)
+			{
+				a.targetPlayer = players[i];
+				dist = distNew;
+				if (dist < MAXAGGRORANGE * (a.level / players[i]->level))
+				{
+					playerClose = true;
+				}
+			}
+			++i;
 		}
 
-		i++;
+		if (!playerClose)
+		{
+			a.subState = PATROL;
+			a.targetPlayer = NULL;
+		}
 	}
 }
 
-void chasePlayer(Player* players[], Player& targetPlayer, AgentState& state, int& currentTarget, Vector3* target[], PhysicsNode& pNode, Ability* abilities[], float msec)
+void chasePlayer(Player* players[], Agent& a, float msec)
 {
 	//calculate distance to leash spot
-	Vector3 leashDiff = *target[2] - pNode.GetPosition();
+	Vector3 leashDiff = *a.patrolLocations[2] - a.physicsNode->GetPosition();
 	float leashDist = sqrtf(Vector3::Dot(leashDiff, leashDiff));
 
-	if (leashDist > LEASHRANGE)
+	if (leashDist > LEASHRANGE || a.targetPlayer->isDead)
 	{
-		state = LEASH;
+		a.subState = LEASH;
+		a.targetPlayer = NULL;
 	}
 	else
 	{
 		//calculate distance to player
-		Vector3 diff = targetPlayer.physicsNode->GetPosition() - pNode.GetPosition();
+		Vector3 diff = a.targetPlayer->physicsNode->GetPosition() - a.physicsNode->GetPosition();
 		float dist = sqrtf(Vector3::Dot(diff, diff));
 
 		//if close to player switch state to useability
 		if (dist < ATTACKRANGE)
 		{
-			state = USE_ABILITY;
+			a.subState = USE_ABILITY;
 		}
+
+		//move towards players location
+		float disX = a.targetPlayer->physicsNode->GetPosition().x - a.physicsNode->GetPosition().x;
+		float disZ = a.targetPlayer->physicsNode->GetPosition().z - a.physicsNode->GetPosition().z;
+		float absX = abs(disX);
+		float absZ = abs(disZ);
+
+		//move to target
+		float dis = absX + absZ;
+		float moveX = ((absX / dis) * MAXSPEED) * msec;
+		float moveZ = ((absZ / dis) * MAXSPEED) * msec;
+
+		moveX = min(moveX, absX);
+		moveZ = min(moveZ, absZ);
+
+		Vector3 newPos = Vector3(a.physicsNode->GetPosition().x + (moveX * sgn<float>(disX)), a.physicsNode->GetPosition().y, a.physicsNode->GetPosition().z + (moveZ * sgn<float>(disZ)));
+
+		a.physicsNode->SetPosition(newPos);
 	}
 
-
-	//move towards players location
-	float disX = targetPlayer.physicsNode->GetPosition().x - pNode.GetPosition().x;
-	float disZ = targetPlayer.physicsNode->GetPosition().z - pNode.GetPosition().z;
-	float absX = abs(disX);
-	float absZ = abs(disZ);
-
-	//move to target
-	float dis = absX + absZ;
-	float moveX = ((absX / dis) * MAXSPEED) * msec;
-	float moveZ = ((absZ / dis) * MAXSPEED) * msec;
-
-	moveX = min(moveX, absX);
-	moveZ = min(moveZ, absZ);
-
-	Vector3 newPos = Vector3(pNode.GetPosition().x + (moveX * sgn<float>(disX)), pNode.GetPosition().y, pNode.GetPosition().z + (moveZ * sgn<float>(disZ)));
-
-	pNode.SetPosition(newPos);
 }
 
-void leashBack(Player* players[], Player& targetPlayer, AgentState& state, int& currentTarget, Vector3* target[], PhysicsNode& pNode, Ability* abilities[], float msec)
+void leashBack(Player* players[], Agent& a, float msec)
 {
 	//at target
-	float disX = target[2]->x - pNode.GetPosition().x;
-	float disZ = target[2]->z - pNode.GetPosition().z;
+	float disX = a.patrolLocations[2]->x - a.physicsNode->GetPosition().x;
+	float disZ = a.patrolLocations[2]->z - a.physicsNode->GetPosition().z;
 	float absX = abs(disX);
 	float absZ = abs(disZ);
 
-	//check its close enough to the point (can lower the numbers when collision is removed)
-	if (absX < 10.1f && absZ < 10.1f)
+	//check its close enough to the point
+	if (absX < 0.1f && absZ < 0.1f)
 	{
 		//change back to patrol
-		state = PATROL;
+		a.subState = PATROL;
 	}
 	else
 	{
@@ -172,38 +187,47 @@ void leashBack(Player* players[], Player& targetPlayer, AgentState& state, int& 
 		moveX = min(moveX, absX);
 		moveZ = min(moveZ, absZ);
 
-		Vector3 newPos = Vector3(pNode.GetPosition().x + (moveX * sgn<float>(disX)), pNode.GetPosition().y, pNode.GetPosition().z + (moveZ * sgn<float>(disZ)));
+		Vector3 newPos = Vector3(a.physicsNode->GetPosition().x + (moveX * sgn<float>(disX)), a.physicsNode->GetPosition().y, a.physicsNode->GetPosition().z + (moveZ * sgn<float>(disZ)));
 
-		pNode.SetPosition(newPos);
+		a.physicsNode->SetPosition(newPos);
 	}
 }
 
-void useAbility(Player* players[], Player& targetPlayer, AgentState& state, int& currentTarget, Vector3* target[], PhysicsNode& pNode, Ability* abilities[], float msec)
+void useAbility(Player* players[], Agent& a, float msec)
 {
-	//look through abilities via priority until one is found not on cooldown
-	int i = 0;
-	while (abilities[i]->cooldown > 0.001f && i < MAXABILITIES)
+	if (a.targetPlayer->isDead)
 	{
-		i++;
+		a.subState = LEASH;
+		a.targetPlayer = NULL;
 	}
-
-	//cast ability
-	if (abilities[i]->cooldown < 0.001f)
+	else
 	{
-		abilities[i]->cooldown = abilities[i]->maxCooldown;
-		printf("Ability: %d \n", i);
-		printf("Cooldown: %4.2f \n", abilities[i]->cooldown);
-	}
+		//look through abilities via priority until one is found not on cooldown
+		int i = 0;
+		while (i < MAXABILITIES && a.myAbilities[i]->cooldown > 0.001f)
+		{
+			i++;
+		}
 
-	//if the player goes out of range, change state to chase
-	//calculate distance to player
-	Vector3 diff = targetPlayer.physicsNode->GetPosition() - pNode.GetPosition();
-	float dist = sqrtf(Vector3::Dot(diff, diff));
+		//cast ability
+		if (i < MAXABILITIES && a.myAbilities[i]->cooldown < 0.001f)
+		{
+			a.myAbilities[i]->cooldown = a.myAbilities[i]->maxCooldown;
+			a.targetPlayer->hp -= a.myAbilities[i]->damage;
+			printf("Ability: %d \n", i);
+			printf("Cooldown: %4.2f \n", a.myAbilities[i]->cooldown);
+		}
 
-	//if player close transition state to stare at player
-	if (dist > (ATTACKRANGE))
-	{
-		state = CHASE_PLAYER;
+		//if the player goes out of range, change state to chase
+		//calculate distance to player
+		Vector3 diff = a.targetPlayer->physicsNode->GetPosition() - a.physicsNode->GetPosition();
+		float dist = sqrtf(Vector3::Dot(diff, diff));
+
+		//if player close transition state to stare at player
+		if (dist > (ATTACKRANGE))
+		{
+			a.subState = CHASE_PLAYER;
+		}
 	}
 }
 
@@ -225,7 +249,7 @@ Agent::Agent(SceneNode* s, PhysicsNode* p) {
 	patrolLocations[1] = GenerateTargetLocation(physicsNode->GetPosition());	// end patrol
 	patrolLocations[2] = new Vector3(0, 0, 0);									// store location
 
-	targetPlayer = new Player;
+	targetPlayer = NULL;
 
 	myAbilities[0] = new Ability();
 	myAbilities[0]->maxCooldown = 20000.0f;
@@ -239,8 +263,10 @@ Agent::Agent(SceneNode* s, PhysicsNode* p) {
 
 	myAbilities[2] = new Ability();
 	myAbilities[2]->maxCooldown = 1000.0f;
-	myAbilities[2]->damage = 8;
+	myAbilities[2]->damage = 9;
 	myAbilities[2]->targetEnemy = true;
+
+	level = 10;
 
 
 }
@@ -248,7 +274,7 @@ Agent::Agent(SceneNode* s, PhysicsNode* p) {
 void Agent::Update(Player* players[], float msec)
 {
 	//run the relevant state
-	states[subState](players, *targetPlayer, subState, targetLocation, patrolLocations, *physicsNode, myAbilities, msec);
+	states[subState](players, *this, msec);
 
 	for (int i = 0; i < MAXABILITIES; ++i)
 	{

@@ -13,7 +13,7 @@ Renderer::Renderer(Window &parent) : OGLRenderer(parent)	{
 	quadW = Mesh::GenerateQuad();
 	quad = Mesh::GenerateQuad();
 
-	LightStorage::GetInstance()->addLight(Light(Vector3(500, -300, 500), Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH * HEIGHTMAP_X)));
+	LightStorage::GetInstance()->addLight(Light(Vector3(100, 100, 100), Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH * HEIGHTMAP_X)));
 	//LightStorage::GetInstance()->addLight(Light(Vector3(500, 0, 500), Vector4(0.9f, 0.9f, 1.0f, 1), (RAW_WIDTH * HEIGHTMAP_X)));
 
 	basicFont = new Font(SOIL_load_OGL_texture(TEXTUREDIR"tahoma.tga",SOIL_LOAD_AUTO,SOIL_CREATE_NEW_ID,SOIL_FLAG_COMPRESS_TO_DXT),16,16);

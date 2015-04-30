@@ -10,6 +10,9 @@ void Camera::UpdateCamera(float msec)	{
 	pitch -= (Window::GetMouse()->GetRelativePosition().y);
 	yaw	  -= (Window::GetMouse()->GetRelativePosition().x);
 
+	yaw = 270.0f;
+	pitch = -90.0f;
+
 	//Bounds check the pitch, to be between straight up and straight down ;)
 	pitch = min(pitch,90.0f);
 	pitch = max(pitch,-90.0f);
