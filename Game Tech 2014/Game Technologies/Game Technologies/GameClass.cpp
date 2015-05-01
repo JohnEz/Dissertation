@@ -28,9 +28,12 @@ void GameClass::UpdatePhysics(float msec) {
 void GameClass::UpdateRendering(float msec) {
 	renderCounter	-= msec;
 
+	Renderer::GetRenderer().UpdateScene(msec);
+	Renderer::GetRenderer().RenderScene();
+
 	if(renderCounter <= 0.0f) {	//Update our rendering logic
-		Renderer::GetRenderer().UpdateScene(1000.0f / (float)RENDER_HZ);
-		Renderer::GetRenderer().RenderScene();
+		//Renderer::GetRenderer().UpdateScene(1000.0f / (float)RENDER_HZ);
+		//Renderer::GetRenderer().RenderScene();
 		renderCounter += (1000.0f / (float)RENDER_HZ);
 	}
 }

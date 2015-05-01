@@ -70,6 +70,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Agent.cpp" />
+    <ClCompile Include="AIManager.cpp" />
     <ClCompile Include="CollisionDetector.cpp" />
     <ClCompile Include="ExtendingMesh.cpp" />
     <ClCompile Include="GameClass.cpp" />
@@ -88,6 +89,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Agent.h" />
+    <ClInclude Include="AIManager.h" />
     <ClInclude Include="CollisionDetector.h" />
     <ClInclude Include="CollisionVolume.h" />
     <ClInclude Include="ExtendingMesh.h" />

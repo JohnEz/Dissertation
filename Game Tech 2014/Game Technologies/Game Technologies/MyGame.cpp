@@ -15,6 +15,8 @@ MyGame::MyGame()	{
 	gameCamera = new Camera(0.0f, 3.142f / 2,Vector3(0,5000,0));
 
 	Renderer::GetRenderer().SetCamera(gameCamera);
+	myAI = AIManager(1,1,1, 14000, 14000, 14000);
+	
 
 	oldState = false;
 	currentState = false;
@@ -84,9 +86,11 @@ void MyGame::UpdateGame(float msec) {
 	}
 
 	//update all the agents
-	for(vector<Agent*>::iterator i = allAgents.begin(); i != allAgents.end(); ++i) {
+	/*for(vector<Agent*>::iterator i = allAgents.begin(); i != allAgents.end(); ++i) {
 		(*i)->Update(allPlayers, msec);
-	}
+	}*/
+
+	myAI.update(allPlayers, allAgents, msec);
 
 	//update all the players
 	for (int i = 0; i < Player::MAX_PLAYERS; ++i)

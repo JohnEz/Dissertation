@@ -37,6 +37,7 @@ _-_-_-_-_-_-_-""  ""
 #include "GameEntity.h"
 #include "GameClass.h"
 #include "SphereNode.h"
+#include "AIManager.h"
 #include "../nclgl/Camera.h"
 #include "../nclgl/CubeRobot.h"
 #include "Stem.h"
@@ -80,6 +81,8 @@ protected:
 	Mesh* sphere;
 
 	int playerCount;
+
+	AIManager myAI;
 
 };
 

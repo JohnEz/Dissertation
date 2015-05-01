@@ -34,6 +34,7 @@ public:
 
 	static const int PATROLSIZE = 3;
 	static const int MAXABILITIES = 3;
+	static const float MAXAGGRORANGE;
 
 	Agent(SceneNode* s, PhysicsNode* p);
 	~Agent(void){};
@@ -46,7 +47,6 @@ public:
 //protected:
 	//FSM variables
 	AgentState subState;
-	HierarchicalState myState;
 	int targetLocation;
 	Vector3* patrolLocations[PATROLSIZE];
 	Player* targetPlayer;
