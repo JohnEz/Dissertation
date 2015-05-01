@@ -67,6 +67,8 @@ protected:
 
 	Player* BuildPlayer(const Vector3 pos);
 
+	Player* ShootPlayer(const Vector3 pos, const Vector3 vel);
+
 	bool oldState;
 	bool currentState;
 
@@ -76,6 +78,8 @@ protected:
 	Mesh* cube;
 	Mesh* quad;
 	Mesh* sphere;
+
+	int playerCount;
 
 };
 

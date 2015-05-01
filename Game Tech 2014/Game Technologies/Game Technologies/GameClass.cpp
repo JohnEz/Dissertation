@@ -18,10 +18,10 @@ GameClass::~GameClass(void)	{
 
 void GameClass::UpdatePhysics(float msec) {
 	physicsCounter	+= msec;
-
+	PhysicsSystem::GetPhysicsSystem().Update(msec);
 	while(physicsCounter >= 0.0f) {
 		physicsCounter -= PHYSICS_TIMESTEP;
-		PhysicsSystem::GetPhysicsSystem().Update(PHYSICS_TIMESTEP);
+		
 	}
 }
 

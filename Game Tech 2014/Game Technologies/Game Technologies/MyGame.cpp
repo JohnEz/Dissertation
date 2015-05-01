@@ -21,16 +21,8 @@ MyGame::MyGame()	{
 
 	sphereSize = 10.0f;
 	speed = 1.0f;
+	playerCount = 0;
 
-	/*
-	We're going to manage the meshes we need in our game in the game class!
-
-	You can do this with textures, too if you want - but you might want to make
-	some sort of 'get / load texture' part of the Renderer or OGLRenderer, so as
-	to encapsulate the API-specific parts of texture loading behind a class so
-	we don't care whether the renderer is OpenGL / Direct3D / using SOIL or 
-	something else...
-	*/
 	cube	= new OBJMesh(MESHDIR"cube.obj");
 	quad	= Mesh::GenerateQuad();
 	sphere	= new OBJMesh(MESHDIR"ico.obj");
@@ -40,19 +32,12 @@ MyGame::MyGame()	{
 
 	//allEntities.push_back(BuildFloatSphereEntity(100.0f, Vector3(200, 300, 156)));
 
-
-	/*allAgents.push_back(BuildAgent(Vector3(0, 250, 0)));
-	allAgents.push_back(BuildAgent(Vector3(100, 250, 100)));
-	allAgents.push_back(BuildAgent(Vector3(200, 250, 400)));
-	allAgents.push_back(BuildAgent(Vector3(300, 250, 300)));
-	allAgents.push_back(BuildAgent(Vector3(400, 250, 200)));*/
-
-	for (int i = 0; i < 1000; ++i)
+	for (int i = 0; i < 500; ++i)
 	{
 		int x, y, z;
 
 		x = (rand() % 10000) - 5000;
-		y = 100;
+		y = 50;
 		z = (rand() % 10000) - 5000;
 		allAgents.push_back(BuildAgent(Vector3(x, y, z))); 
 	}
@@ -62,9 +47,11 @@ MyGame::MyGame()	{
 		allPlayers[i] = NULL;
 	}
 
-	allPlayers[0] = BuildPlayer(Vector3(100, 100, 100));
-	allPlayers[1] = BuildPlayer(Vector3(200, 200, 2000));
-	allPlayers[2] = BuildPlayer(Vector3(3000, 100, 300));
+	allPlayers[0] = BuildPlayer(Vector3(100, 50, 100));
+	allPlayers[1] = BuildPlayer(Vector3(200, 50, 2000));
+	allPlayers[2] = BuildPlayer(Vector3(3000, 50, 300));
+
+	playerCount = 3;
 
 
 }
@@ -129,7 +116,8 @@ void MyGame::UpdateGame(float msec) {
 
 		norm.Normalise();
 
-		allEntities.push_back(BuildSphereEntity(sphereSize, gameCamera->GetPosition(), norm * speed));
+		allPlayers[playerCount] = ShootPlayer(gameCamera->GetPosition(), norm * speed);
+		playerCount++;
 	}
 
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))
@@ -394,6 +382,34 @@ Player* MyGame::BuildPlayer(const Vector3 pos)
 
 	p->SetPosition(pos);
 	p->SetLinearVelocity(Vector3(0, 0, 0));
+	p->SetAngularVelocity(Vector3(0, 0, 0));
+
+	float I = 2.5f/(1.0f*25.0f*25.0f);
+	float elements[] = {I, 0, 0, 0, 0, I, 0, 0, 0, 0, I, 0, 0, 0, 0, 1};
+	Matrix4 mat = Matrix4(elements);
+	p->SetInverseInertia(mat);
+
+	p->SetInverseMass(1.0f);
+
+	p->SetCollisionVolume(new CollisionSphere(25.0f));
+
+	SceneNode* s = new SceneNode(sphere);
+
+	s->SetModelScale(Vector3(25.0f,25.0f,25.0f));
+	s->SetBoundingRadius(25.0f);
+	s->SetColour(Vector4(1,0,0,1));
+
+	Player* a = new Player(s, p, 8, 10000);
+	a->ConnectToSystems();
+	return a;
+}
+
+Player* MyGame::ShootPlayer(const Vector3 pos, const Vector3 vel)
+{
+	PhysicsNode*p = new PhysicsNode();
+
+	p->SetPosition(pos);
+	p->SetLinearVelocity(vel);
 	p->SetAngularVelocity(Vector3(0, 0, 0));
 
 	float I = 2.5f/(1.0f*25.0f*25.0f);

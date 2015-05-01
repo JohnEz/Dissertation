@@ -63,6 +63,5 @@ void Performance::calculatePPS(float msec)
 
 		frameCountPPS = 0;
 
-		printf("f[s: %4.2f \n", fps);
 	}
 }
