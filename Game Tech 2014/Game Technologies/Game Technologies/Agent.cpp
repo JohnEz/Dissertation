@@ -66,7 +66,9 @@ void Patrol(Player* players[], Agent& a, float msec)
 		float dist = sqrtf(Vector3::Dot(diff, diff));
 
 		//if player close transition state to stare at player
-		if (dist < Agent::MAXAGGRORANGE * (a.level / players[i]->level) && !players[i]->isDead)
+		float aggroRange = max(Agent::MAXAGGRORANGE, Agent::MAXAGGRORANGE * (a.level / players[i]->level));
+
+		if (dist < aggroRange && !players[i]->isDead)
 		{
 			a.subState = STARE_AT_PLAYER; //change state
 			*a.patrolLocations[2] = a.physicsNode->GetPosition(); //set position it left patrol
@@ -83,8 +85,9 @@ void stareAtPlayer(Player* players[], Agent& a, float msec)
 	//calculate distance to player
 	Vector3 diff = a.targetPlayer->physicsNode->GetPosition() - a.physicsNode->GetPosition();
 	float dist = sqrtf(Vector3::Dot(diff, diff));
+	float aggroRange = max(Agent::MAXAGGRORANGE, Agent::MAXAGGRORANGE * (a.level / a.targetPlayer->level));
 
-	if (dist < (Agent::MAXAGGRORANGE * 0.75f) * (a.level / a.targetPlayer->level) && !a.targetPlayer->isDead) // if the player is in pull range
+	if (dist < (aggroRange * 0.75f) * (a.level / a.targetPlayer->level) && !a.targetPlayer->isDead) // if the player is in pull range
 	{
 		a.subState = CHASE_PLAYER;
 	}
@@ -103,7 +106,9 @@ void stareAtPlayer(Player* players[], Agent& a, float msec)
 			{
 				a.targetPlayer = players[i];
 				dist = distNew;
-				if (dist < Agent::MAXAGGRORANGE * (a.level / players[i]->level))
+				float aggroRangeNew = max(Agent::MAXAGGRORANGE, Agent::MAXAGGRORANGE * (a.level / players[i]->level));
+
+				if (dist < aggroRangeNew)
 				{
 					playerClose = true;
 				}

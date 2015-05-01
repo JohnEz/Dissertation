@@ -135,7 +135,6 @@ void Renderer::UpdateScene(float msec)	{
 	}
 
 	root->Update(msec * speed);
-	Performance::GetInstance()->calculateFPS(msec);
 }
 
 void Renderer::RenderScene()	{

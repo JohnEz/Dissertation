@@ -97,8 +97,16 @@ void MyGame::UpdateGame(float msec) {
 	{
 		if (allPlayers[i] != NULL)
 		{
-			allPlayers[i]->Update(msec);
+			if (allPlayers[i]->isDead)
+			{
+				allPlayers[i] = NULL;
+			}
+			else
+			{
+				allPlayers[i]->Update(msec);
+			}
 		}
+		
 	}
 
 	oldState = currentState;
@@ -403,7 +411,7 @@ Player* MyGame::BuildPlayer(const Vector3 pos)
 	s->SetBoundingRadius(25.0f);
 	s->SetColour(Vector4(1,0,0,1));
 
-	Player* a = new Player(s, p, 8, 10000);
+	Player* a = new Player(s, p, 8, 1000);
 	a->ConnectToSystems();
 	return a;
 }
@@ -431,7 +439,7 @@ Player* MyGame::ShootPlayer(const Vector3 pos, const Vector3 vel)
 	s->SetBoundingRadius(25.0f);
 	s->SetColour(Vector4(1,0,0,1));
 
-	Player* a = new Player(s, p, 8, 10000);
+	Player* a = new Player(s, p, 8, 1000);
 	a->ConnectToSystems();
 	return a;
 }

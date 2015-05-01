@@ -73,18 +73,16 @@ void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
 
 bool AIManager::CheckBounding(PhysicsNode& n, float aggroRange,Vector3 pos, Vector3 halfDim)
 {
-	CollisionSphere& sphere = *(CollisionSphere*)n.GetCollisionVolume();
-
 	float dist = abs(pos.x - n.GetPosition().x);
-	float sum = halfDim.x + sphere.GetRadius();
+	float sum = halfDim.x + aggroRange;
 
 	if(dist <= sum) {
 		dist = abs(pos.y - n.GetPosition().y);
-		sum = halfDim.y + sphere.GetRadius();
+		sum = halfDim.y + aggroRange;
 
 		if(dist <= sum) {
 			dist = abs(pos.z - n.GetPosition().z);
-			sum = halfDim.z + sphere.GetRadius();
+			sum = halfDim.z + aggroRange;
 
 			if(dist <= sum) {
 				//if there is collision data storage

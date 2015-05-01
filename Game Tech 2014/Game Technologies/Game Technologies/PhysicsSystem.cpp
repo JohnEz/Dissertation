@@ -83,7 +83,6 @@ void	PhysicsSystem::Update(float msec) {
 		(*i)->Update(msec);
 	}
 
-	Performance::GetInstance()->calculatePPS(msec);
 }
 
 void	PhysicsSystem::BroadPhaseCollisions() {
