@@ -58,9 +58,11 @@ public:
 
 	GameEntity* BuildSphereEntity(float radius, Vector3 pos, Vector3 vel);
 
+	PhysicsNode*	physicsNode;
+
 protected:
 	SceneNode*		renderNode;
-	PhysicsNode*	physicsNode;
+	//PhysicsNode*	physicsNode; //TODO undo this
 
 	bool removed;
 };

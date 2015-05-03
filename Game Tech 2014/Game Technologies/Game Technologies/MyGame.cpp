@@ -11,6 +11,34 @@ You can completely change all of this if you want, it's your game!
 
 */
 
+GameEntity* MyGame::addEnt(const Vector3 pos, const Vector4 colour)
+{
+	PhysicsNode*p = new PhysicsNode();
+
+	p->SetPosition(pos);
+	p->SetLinearVelocity(Vector3(0, 0, 0));
+	p->SetAngularVelocity(Vector3(0, 0, 0));
+
+	float I = 2.5f/(1.0f*25.0f*25.0f);
+	float elements[] = {I, 0, 0, 0, 0, I, 0, 0, 0, 0, I, 0, 0, 0, 0, 1};
+	Matrix4 mat = Matrix4(elements);
+	p->SetInverseInertia(mat);
+
+	p->SetInverseMass(1.0f);
+
+	p->SetCollisionVolume(new CollisionSphere(25.0f));
+
+	SceneNode* s = new SceneNode(sphere);
+
+	s->SetModelScale(Vector3(25.0f,25.0f,25.0f));
+	s->SetBoundingRadius(25.0f);
+	s->SetColour(colour);
+
+	GameEntity* a = new GameEntity(s, p);
+	a->ConnectToSystems();
+	return a;
+}
+
 MyGame::MyGame()	{
 	gameCamera = new Camera(0.0f, 3.142f / 2,Vector3(0,5000,0));
 
@@ -41,7 +69,8 @@ MyGame::MyGame()	{
 		x = (rand() % 10000) - 5000;
 		y = 50;
 		z = (rand() % 10000) - 5000;
-		allAgents.push_back(BuildAgent(Vector3(x, y, z))); 
+		//allAgents.push_back(BuildAgent(Vector3(x, y, z)));
+		myAI.addAgent(addEnt(Vector3(x, y, z), Vector4(0,0,1,1))->physicsNode);
 	}
 
 	for (int i = 0; i < Player::MAX_PLAYERS; ++i)
@@ -49,9 +78,13 @@ MyGame::MyGame()	{
 		allPlayers[i] = NULL;
 	}
 
-	allPlayers[0] = BuildPlayer(Vector3(100, 50, 100));
-	allPlayers[1] = BuildPlayer(Vector3(200, 50, 2000));
-	allPlayers[2] = BuildPlayer(Vector3(3000, 50, 300));
+	myAI.addPlayer(addEnt(Vector3(100, 50, 100), Vector4(0,1,0,1))->physicsNode);
+	//myAI.addPlayer(addEnt(Vector3(200, 50, 2000), Vector4(0,1,0,1))->physicsNode);
+	//myAI.addPlayer(addEnt(Vector3(3000, 50, 300), Vector4(0,1,0,1))->physicsNode);
+
+	//allPlayers[0] = BuildPlayer(Vector3(100, 50, 100));
+	//allPlayers[1] = BuildPlayer(Vector3(200, 50, 2000));
+	//allPlayers[2] = BuildPlayer(Vector3(3000, 50, 300));
 
 	playerCount = 3;
 
@@ -77,6 +110,7 @@ want your games to have some sort of internal logic to them, and this
 logic will be added to this function.
 */
 void MyGame::UpdateGame(float msec) {
+
 	if(gameCamera) {
 		gameCamera->UpdateCamera(msec);
 	}
@@ -91,23 +125,6 @@ void MyGame::UpdateGame(float msec) {
 	}*/
 
 	myAI.update(allPlayers, allAgents, msec);
-
-	//update all the players
-	for (int i = 0; i < Player::MAX_PLAYERS; ++i)
-	{
-		if (allPlayers[i] != NULL)
-		{
-			if (allPlayers[i]->isDead)
-			{
-				allPlayers[i] = NULL;
-			}
-			else
-			{
-				allPlayers[i]->Update(msec);
-			}
-		}
-		
-	}
 
 	oldState = currentState;
 	currentState = Window::GetMouse()->ButtonDown(MOUSE_LEFT);
@@ -132,29 +149,7 @@ void MyGame::UpdateGame(float msec) {
 		playerCount++;
 	}
 
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))
-	{
-		Vector3 newPos = allPlayers[0]->physicsNode->GetPosition() + (Vector3(1, 0, 0) * msec);
-		allPlayers[0]->physicsNode->SetPosition(newPos);
-	}
 
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_RIGHT))
-	{
-		Vector3 newPos = allPlayers[0]->physicsNode->GetPosition() + (Vector3(0, 0, 1) * msec);
-		allPlayers[0]->physicsNode->SetPosition(newPos);
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_LEFT))
-	{
-		Vector3 newPos = allPlayers[0]->physicsNode->GetPosition() + (Vector3(0, 0, -1) * msec);
-		allPlayers[0]->physicsNode->SetPosition(newPos);
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_DOWN))
-	{
-		Vector3 newPos = allPlayers[0]->physicsNode->GetPosition() + (Vector3(-1, 0, 0) * msec);
-		allPlayers[0]->physicsNode->SetPosition(newPos);
-	}
 
 	/*
 	Here's how we can use OGLRenderer's inbuilt debug-drawing functions! 

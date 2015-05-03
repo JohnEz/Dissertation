@@ -200,8 +200,9 @@ void leashBack(Player* players[], Agent& a, float msec)
 
 void useAbility(Player* players[], Agent& a, float msec)
 {
-	if (a.targetPlayer->isDead)
+	if (a.targetPlayer->isDead) // if the player is dead
 	{
+
 		a.subState = LEASH;
 		a.targetPlayer = NULL;
 	}
@@ -271,8 +272,6 @@ Agent::Agent(SceneNode* s, PhysicsNode* p) {
 	myAbilities[2]->targetEnemy = true;
 
 	level = 10;
-
-
 }
 
 void Agent::Update(Player* players[], float msec)

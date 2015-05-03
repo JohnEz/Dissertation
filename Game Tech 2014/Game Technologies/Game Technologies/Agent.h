@@ -16,11 +16,6 @@ enum AgentState {
 	MAX_STATES
 };
 
-enum HierarchicalState {
-	DEFUALT,
-	AGGROD
-};
-
 struct Ability {
 	float maxCooldown;
 	float cooldown;

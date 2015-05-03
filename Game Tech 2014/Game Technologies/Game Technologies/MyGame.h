@@ -66,6 +66,8 @@ protected:
 
 	Agent* BuildAgent(const Vector3 pos);
 
+	GameEntity* addEnt(const Vector3 pos, const Vector4 colour);
+
 	Player* BuildPlayer(const Vector3 pos);
 
 	Player* ShootPlayer(const Vector3 pos, const Vector3 vel);
