@@ -41,12 +41,13 @@ struct Players {
 struct Agents {
 	static const int MAXAGENTS = 1000;
 	static const int AGGRORANGE = 1000;
+	static const int MAXABILITIES = 3;
 
 	State state[MAXAGENTS];
 	int targetLocation[MAXAGENTS];
 	Vector3 patrolLocation[MAXAGENTS][3];
 	int targetPlayer[MAXAGENTS];
-	Ability* myAbilities[MAXAGENTS][3];
+	Ability myAbilities[MAXAGENTS][MAXABILITIES];
 	int level[MAXAGENTS];
 
 	float x[MAXAGENTS];
@@ -83,4 +84,6 @@ protected:
 	PhysicsNode* agentNodes[Agents::MAXAGENTS];
 
 	vector<int> myAgentsPlayers[Agents::MAXAGENTS];
+
+	Ability agentAbilities[5];
 };

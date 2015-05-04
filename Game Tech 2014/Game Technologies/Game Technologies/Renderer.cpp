@@ -143,8 +143,8 @@ void Renderer::RenderScene()	{
 
 	DrawText("FPS :" + std::to_string(Performance::GetInstance()->getFPS()), Vector3(0,0,0), 16.0f);
 	DrawText("PPS :" + std::to_string(Performance::GetInstance()->getPPS()), Vector3(0,16.0f,0), 16.0f);
-	DrawText("Score :" + std::to_string(Performance::GetInstance()->getScore()), Vector3(0,32.0f,0), 16.0f);
-	DrawText("Collisions :" + std::to_string(Performance::GetInstance()->getCollisions()), Vector3(0,48.0f,0), 16.0f);
+	DrawText("Agents :" + std::to_string(Performance::GetInstance()->getScore()), Vector3(0,32.0f,0), 16.0f);
+	DrawText("Players :" + std::to_string(Performance::GetInstance()->getCollisions()), Vector3(0,48.0f,0), 16.0f);
 
 	FillBuffers();
 	//DrawPointLights();

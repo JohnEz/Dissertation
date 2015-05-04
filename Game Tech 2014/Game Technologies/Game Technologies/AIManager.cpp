@@ -266,20 +266,19 @@ void useAbility(int* a, Players* players, Agents* agents, float msec)
 
 		//TODO ADD ABILITIES BACK
 		//look through abilities via priority until one is found not on cooldown
-		/*int i = 0;
-		while (i < MAXABILITIES && a.myAbilities[i]->cooldown > 0.001f)
-		{
-		i++;
+		int i = 0;
+		while (i < agents->MAXABILITIES && agents->myAbilities[*a][i].cooldown > 0.001f) {
+			i++;
 		}
 
 		//cast ability
-		if (i < MAXABILITIES && a.myAbilities[i]->cooldown < 0.001f)
+		if (i < agents->MAXABILITIES && agents->myAbilities[*a][i].cooldown < 0.001f)
 		{
-		a.myAbilities[i]->cooldown = a.myAbilities[i]->maxCooldown;
-		a.targetPlayer->hp -= a.myAbilities[i]->damage;
-		printf("Ability: %d \n", i);
-		printf("Cooldown: %4.2f \n", a.myAbilities[i]->cooldown);
-		}*/
+			agents->myAbilities[*a][i].cooldown = agents->myAbilities[*a][i].maxCooldown;
+			players->hp[agents->targetPlayer[*a]] -= agents->myAbilities[*a][i].damage;
+			printf("Ability: %d \n", i);
+			printf("Cooldown: %4.2f \n", agents->myAbilities[*a][i].cooldown);
+		}
 
 		//if the player goes out of range, change state to chase
 		//calculate distance to player
@@ -296,6 +295,16 @@ void useAbility(int* a, Players* players, Agents* agents, float msec)
 	}
 }
 
+void reduceCooldowns(int* a, Agents* agents, float msec)
+{
+	for (int i = 0 ; i < agents->MAXABILITIES; ++i)
+	{
+		if (agents->myAbilities[*a][i].cooldown > 0)
+		{
+			agents->myAbilities[*a][i].cooldown -= msec;
+		}
+	}
+}
 
 
 AIManager::AIManager(int xNum, int yNum, int zNum, float height, float width, float depth)
@@ -317,6 +326,21 @@ AIManager::AIManager(int xNum, int yNum, int zNum, float height, float width, fl
 	states[CHASE_PLAYERS] = chasePlayer;
 	states[LEASHS] = leashBack;
 	states[USE_ABILITYS] = useAbility;
+
+	agentAbilities[0] = Ability();
+	agentAbilities[0].maxCooldown = 20000.0f;
+	agentAbilities[0].damage = 240;
+	agentAbilities[0].targetEnemy = true;
+
+	agentAbilities[1] = Ability();
+	agentAbilities[1].maxCooldown = 14000.0f;
+	agentAbilities[1].damage = 140;
+	agentAbilities[1].targetEnemy = true;
+
+	agentAbilities[4] = Ability();
+	agentAbilities[4].maxCooldown = 1000.0f;
+	agentAbilities[4].damage = 9;
+	agentAbilities[4].targetEnemy = true;
 
 }
 
@@ -397,13 +421,12 @@ void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
 {
 	Broadphase2(msec);
 
-
-
 	//set the node positions after updates
 	for (int i = 0; i < agentCount; ++i)
 	{
 		//run the state functions
 		states[myAgents.state[i]](&i, &myPlayers, &myAgents, msec);
+		reduceCooldowns(&i, &myAgents, msec);
 
 		if (agentNodes[i] != NULL)
 		{
@@ -411,9 +434,23 @@ void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
 		}
 	}
 
+	//update players
 	for (int i = 0; i < playerCount; ++i)
 	{
-		playerNodes[i]->SetPosition(Vector3(myPlayers.x[i], myPlayers.y[i], myPlayers.z[i]));
+		// if the player isnt dead
+		if (!myPlayers.isDead[i])
+		{
+			//set the nodes position to the players position
+			playerNodes[i]->SetPosition(Vector3(myPlayers.x[i], myPlayers.y[i], myPlayers.z[i]));
+
+			// if the player's hp is 0
+			if (myPlayers.hp[i] < 1)
+			{
+				// the player must be dead
+				myPlayers.isDead[i] = true;
+			}
+		}
+		
 	}
 
 
@@ -472,7 +509,9 @@ void AIManager::addAgent(PhysicsNode* a)
 
 	myAgents.targetPlayer[agentCount] = -1; // no target player
 
-	//abilities here
+	myAgents.myAbilities[agentCount][0] = agentAbilities[0];
+	myAgents.myAbilities[agentCount][1] = agentAbilities[1];
+	myAgents.myAbilities[agentCount][2] = agentAbilities[4];
 
 	myAgents.level[agentCount] = 100; //(rand() % 100) + 1; // randomly generate level
 
@@ -486,6 +525,7 @@ void AIManager::addAgent(PhysicsNode* a)
 	{
 		agentCount++;
 	}
+	Performance::GetInstance()->setScore(agentCount);
 }
 
 void AIManager::addPlayer(PhysicsNode* p)
@@ -509,4 +549,5 @@ void AIManager::addPlayer(PhysicsNode* p)
 		playerCount++;
 	}
 
+	Performance::GetInstance()->setCollisions(playerCount);
 }
