@@ -1,16 +1,6 @@
 #include "MyGame.h"
 #include "Agent.h"
 
-/*
-Creates a really simple scene for our game - A cube robot standing on
-a floor. As the module progresses you'll see how to get the robot moving
-around in a physically accurate manner, and how to stop it falling
-through the floor as gravity is added to the scene. 
-
-You can completely change all of this if you want, it's your game!
-
-*/
-
 GameEntity* MyGame::addEnt(const Vector3 pos, const Vector4 colour)
 {
 	PhysicsNode*p = new PhysicsNode();
@@ -43,7 +33,7 @@ MyGame::MyGame()	{
 	gameCamera = new Camera(0.0f, 3.142f / 2,Vector3(0,5000,0));
 
 	Renderer::GetRenderer().SetCamera(gameCamera);
-	myAI = AIManager(1,1,1, 14000, 14000, 14000);
+	myAI = AIManager(2,2,2, 14000, 14000, 14000);
 	
 
 	oldState = false;
@@ -78,7 +68,18 @@ MyGame::MyGame()	{
 		allPlayers[i] = NULL;
 	}
 
-	myAI.addPlayer(addEnt(Vector3(100, 50, 100), Vector4(0,1,0,1))->physicsNode);
+	
+	for (int i = 0; i < 1; ++i)
+	{
+		int x, y, z;
+
+		x = (rand() % 10000) - 5000;
+		y = 50;
+		z = (rand() % 10000) - 5000;
+		myAI.addPlayer(addEnt(Vector3(x, y, z), Vector4(1,0,0,1))->physicsNode);
+	}
+
+	//myAI.addPlayer(addEnt(Vector3(100, 50, 100), Vector4(0,1,0,1))->physicsNode);
 	//myAI.addPlayer(addEnt(Vector3(200, 50, 2000), Vector4(0,1,0,1))->physicsNode);
 	//myAI.addPlayer(addEnt(Vector3(3000, 50, 300), Vector4(0,1,0,1))->physicsNode);
 

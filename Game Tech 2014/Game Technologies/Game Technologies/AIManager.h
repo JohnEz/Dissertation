@@ -3,10 +3,15 @@
 #include "PhysicsNode.h"
 #include <vector>
 
-struct AIWorldPartition{
+/*struct AIWorldPartition{
 	Vector3 pos;
 	vector<Agent*> myAgents;
 	vector<Player*> myPlayers;
+};*/
+
+struct AIWorldPartition{
+	Vector3 pos;
+	vector<int> myPlayers;
 };
 
 enum State {
@@ -20,7 +25,7 @@ enum State {
 
 struct Players {
 
-	static const int MAXPLAYERS = 5;
+	static const int MAXPLAYERS = 1000;
 
 	int level[MAXPLAYERS];
 	int hp[MAXPLAYERS];
@@ -47,6 +52,8 @@ struct Agents {
 	float x[MAXAGENTS];
 	float y[MAXAGENTS];
 	float z[MAXAGENTS];
+
+	int players[MAXAGENTS][10];
 };
 
 class AIManager {
@@ -58,6 +65,7 @@ public:
 	void update(Player* players[], vector<Agent*> allAgents, float msec);
 	bool CheckBounding(PhysicsNode& n, float aggroRange,Vector3 pos, Vector3 halfDim);
 	void Broadphase(Player* players[], vector<Agent*> allAgents, float msec);
+	void Broadphase2(float msec);
 	void addAgent(PhysicsNode* a);
 	void addPlayer(PhysicsNode* p);
 
@@ -73,4 +81,6 @@ protected:
 
 	PhysicsNode* playerNodes[Players::MAXPLAYERS];
 	PhysicsNode* agentNodes[Agents::MAXAGENTS];
+
+	vector<int> myAgentsPlayers[Agents::MAXAGENTS];
 };

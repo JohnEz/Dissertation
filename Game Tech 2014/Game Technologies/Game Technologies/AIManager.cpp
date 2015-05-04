@@ -2,12 +2,12 @@
 
 void (*states[MAX_STATESS]) (int* a, Players* players, Agents* agents, float msec);
 
-vector<AIWorldPartition*> createWorldPartitions(int xNum, int yNum, int zNum, float height, float width, float depth)
+vector<AIWorldPartition*> createWorldPartitions(int xNum, int yNum, int zNum, float height, float width, float depth, const Vector3 halfDim)
 {
 	//get position locations
-	float xDiff = width / (xNum+1);
-	float yDiff = height / (yNum+1);
-	float zDiff = depth / (zNum+1);
+	float xDiff = width / (xNum);
+	float yDiff = height / (yNum);
+	float zDiff = depth / (zNum);
 
 	float xHalf = width / 2;
 	float yHalf = height / 2;
@@ -22,7 +22,7 @@ vector<AIWorldPartition*> createWorldPartitions(int xNum, int yNum, int zNum, fl
 			for (int k = 1; k <= zNum; ++k)
 			{
 				AIWorldPartition* world = new AIWorldPartition();
-				world->pos = Vector3((xDiff * i) - xHalf, (yDiff * j) - yHalf, (zDiff * k) - zHalf);
+				world->pos = Vector3((xDiff * i) - xHalf - halfDim.x, (yDiff * j) - yHalf - halfDim.x, (zDiff * k) - zHalf - halfDim.x);
 				partitions.push_back(world);
 			}
 		}
@@ -84,21 +84,24 @@ void Patrol(int* a, Players* players, Agents* agents, float msec)
 
 	int i = 0;
 	// loop through all the players
-	while (i < Players::MAXPLAYERS && players->maxHP[i] != 0)
+	while (i < Players::MAXPLAYERS && agents->players[*a][i] > -1)
 	{
+
+		//the player
+		int p = agents->players[*a][i];
 		//calculate distance to player
-		Vector3 diff = Vector3(players->x[i] - agents->x[*a], players->y[i] - agents->y[*a],  players->z[i] - agents->z[*a]);
+		Vector3 diff = Vector3(players->x[p] - agents->x[*a], players->y[p] - agents->y[*a],  players->z[p] - agents->z[*a]);
 
 		float dist = sqrtf(Vector3::Dot(diff, diff));
 
 		//if player close transition state to stare at player
-		float aggroRange = max(agents->AGGRORANGE, agents->AGGRORANGE * (agents->level[*a] / players->level[i]));
+		float aggroRange = min(agents->AGGRORANGE, agents->AGGRORANGE * ((float)agents->level[*a] / (float)players->level[p]));
 
-		if (dist < aggroRange && !players->isDead[i])
+		if (dist < aggroRange && !players->isDead[p])
 		{
 			agents->state[*a] = STARE_AT_PLAYERS; //change state
 			agents->patrolLocation[*a][2] = Vector3(agents->x[*a], agents->y[*a], agents->z[*a]); //set position it left patrol
-			agents->targetPlayer[*a] = i; // playing that is being stared at
+			agents->targetPlayer[*a] = p; // playing that is being stared at
 			i = Player::MAX_PLAYERS; // exit the loop
 		}
 		i++;
@@ -114,7 +117,7 @@ void stareAtPlayer(int* a, Players* players, Agents* agents, float msec)
 	Vector3 playerPos = Vector3(players->x[p], players->y[p], players->z[p]);
 	Vector3 diff = playerPos - Vector3(agents->x[*a], agents->y[*a], agents->z[*a]);
 	float dist = sqrtf(Vector3::Dot(diff, diff));
-	float aggroRange = max(agents->AGGRORANGE, agents->AGGRORANGE * (agents->level[*a] / players->level[p]));
+	float aggroRange = min(agents->AGGRORANGE, agents->AGGRORANGE * ((float)agents->level[*a] / (float)players->level[p]));
 	float pullRange = (aggroRange * 0.75f) * ((float)agents->level[*a] / (float)players->level[p]);
 
 
@@ -128,20 +131,22 @@ void stareAtPlayer(int* a, Players* players, Agents* agents, float msec)
 		bool playerClose = false;
 		int i = 0;
 
-		//loop through the players TODO CHECK ISDEAD SHOULD BE HERE
-		while (i < players->MAXPLAYERS && players->maxHP[i] != 0 && !players->isDead[i])
+		//loop through the players
+		while (i < players->MAXPLAYERS && agents->players[*a][i] > -1)
 		{
+			int p2 = agents->players[*a][i];
+
 			//calculate distance to player
-			playerPos = Vector3(players->x[i], players->y[i], players->z[i]);
+			playerPos = Vector3(players->x[p2], players->y[p2], players->z[p2]);
 			Vector3 diffNew = playerPos - Vector3(agents->x[*a], agents->y[*a], agents->z[*a]);
 			float distNew = sqrtf(Vector3::Dot(diffNew, diffNew));
 
 			// if the new distance is less switch targte
-			if (distNew <= dist)
+			if (distNew <= dist  && !players->isDead[p2])
 			{
-				agents->targetPlayer[*a] = i;
+				agents->targetPlayer[*a] = p2;
 				dist = distNew;
-				float aggroRangeNew = max(agents->AGGRORANGE, agents->AGGRORANGE * (agents->level[*a] / players->level[i]));
+				float aggroRangeNew = min(agents->AGGRORANGE, agents->AGGRORANGE * (agents->level[*a] / players->level[p2]));
 
 				if (dist < aggroRangeNew)
 				{
@@ -297,7 +302,7 @@ AIManager::AIManager(int xNum, int yNum, int zNum, float height, float width, fl
 {
 	halfDim = Vector3(width / (xNum * 2), height / (yNum * 2), depth / (zNum * 2));
 
-	allPartitions = createWorldPartitions(xNum, yNum, zNum, height, width, depth);
+	allPartitions = createWorldPartitions(xNum, yNum, zNum, height, width, depth, halfDim);
 
 	agentCount = 0;
 	playerCount = 0;
@@ -318,35 +323,79 @@ AIManager::AIManager(int xNum, int yNum, int zNum, float height, float width, fl
 void AIManager::Broadphase(Player* players[], vector<Agent*> allAgents, float msec)
 {
 	//loop for all world partitions
+	/*for (int i = 0; i < allPartitions.size(); i++) {
+	allPartitions[i]->myAgents.clear();
+	allPartitions[i]->myPlayers.clear();
+
+	//do the players
+	for (int j = 0; j < Player::MAX_PLAYERS; j++) {
+	Player* p = players[j];
+	if (p != NULL && CheckBounding(*p->physicsNode, 0, allPartitions[i]->pos, halfDim))
+	{
+	allPartitions[i]->myPlayers.push_back(players[j]);
+	}
+	}
+
+	//add the agents and update the agents
+	for (int j = 0; j < allAgents.size(); j++) {
+	Agent* a = allAgents[j];
+	if (CheckBounding(*a->physicsNode, Agent::MAXAGGRORANGE, allPartitions[i]->pos, halfDim))
+	{
+	allPartitions[i]->myAgents.push_back(allAgents[j]);
+	allPartitions[i]->myPlayers.resize(Player::MAX_PLAYERS);
+	allAgents[j]->Update(&allPartitions[i]->myPlayers[0], msec);
+	}
+	}
+	}*/
+}
+
+void AIManager::Broadphase2(float msec)
+{
+
+	for (int j = 0; j < agentCount; j++) {
+			myAgentsPlayers[j].clear();
+	}
+
+	//loop for all world partitions
 	for (int i = 0; i < allPartitions.size(); i++) {
-		allPartitions[i]->myAgents.clear();
 		allPartitions[i]->myPlayers.clear();
 
 		//do the players
-		for (int j = 0; j < Player::MAX_PLAYERS; j++) {
-			Player* p = players[j];
-			if (p != NULL && CheckBounding(*p->physicsNode, 0, allPartitions[i]->pos, halfDim))
+		for (int j = 0; j < playerCount; j++) {
+
+			if (myPlayers.maxHP[j] > 0 && CheckBounding(*playerNodes[j], 0, allPartitions[i]->pos, halfDim))
 			{
-				allPartitions[i]->myPlayers.push_back(players[j]);
+				allPartitions[i]->myPlayers.push_back(j);
 			}
 		}
 
 		//add the agents and update the agents
-		for (int j = 0; j < allAgents.size(); j++) {
-			Agent* a = allAgents[j];
-			if (CheckBounding(*a->physicsNode, Agent::MAXAGGRORANGE, allPartitions[i]->pos, halfDim))
+		for (int j = 0; j < agentCount; j++) {
+
+			//check if the agent is in this partition
+			if (CheckBounding(*agentNodes[j], Agent::MAXAGGRORANGE, allPartitions[i]->pos, halfDim))
 			{
-				allPartitions[i]->myAgents.push_back(allAgents[j]);
-				allPartitions[i]->myPlayers.resize(Player::MAX_PLAYERS);
-				allAgents[j]->Update(&allPartitions[i]->myPlayers[0], msec);
+				//for each player in this partition, add it to the list of players for the agent
+				for (int k = 0; k < allPartitions[i]->myPlayers.size(); ++k) {
+					myAgentsPlayers[j].push_back(allPartitions[i]->myPlayers[k]);
+				}
+				
 			}
+		}
+	}
+
+	//convert the list into an array in the struct for cuda
+	for (int i = 0; i < agentCount; ++i) {
+		for (int j = 0; j < myAgentsPlayers[i].size(); ++j)
+		{
+			myAgents.players[i][j] = myAgentsPlayers[i][j];
 		}
 	}
 }
 
 void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
 {
-	Broadphase(players, allAgents, msec);
+	Broadphase2(msec);
 
 
 
@@ -425,7 +474,7 @@ void AIManager::addAgent(PhysicsNode* a)
 
 	//abilities here
 
-	myAgents.level[agentCount] = (rand() % 100) + 1; // randomly generate level
+	myAgents.level[agentCount] = 100; //(rand() % 100) + 1; // randomly generate level
 
 	myAgents.x[agentCount] = a->GetPosition().x; // store the x in an array
 	myAgents.y[agentCount] = a->GetPosition().y; // store the y in an array
@@ -441,7 +490,7 @@ void AIManager::addAgent(PhysicsNode* a)
 
 void AIManager::addPlayer(PhysicsNode* p)
 {
-	myPlayers.level[playerCount] = (rand() % 100) + 1; // randomly generate level
+	myPlayers.level[playerCount] = 100; //(rand() % 100) + 1; // randomly generate level
 
 	myPlayers.hp[playerCount] = 1000; //set hp
 
