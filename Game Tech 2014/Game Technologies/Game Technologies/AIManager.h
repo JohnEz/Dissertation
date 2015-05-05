@@ -3,6 +3,9 @@
 #include "PhysicsNode.h"
 #include <vector>
 
+#ifndef AIMANAGER
+#define AIMANAGER
+
 /*struct AIWorldPartition{
 	Vector3 pos;
 	vector<Agent*> myAgents;
@@ -25,7 +28,7 @@ enum State {
 
 struct Players {
 
-	static const int MAXPLAYERS = 1000;
+	static const int MAXPLAYERS = 100;
 
 	int level[MAXPLAYERS];
 	int hp[MAXPLAYERS];
@@ -54,7 +57,7 @@ struct Agents {
 	float y[MAXAGENTS];
 	float z[MAXAGENTS];
 
-	int players[MAXAGENTS][10];
+	int players[MAXAGENTS][Players::MAXPLAYERS];
 };
 
 class AIManager {
@@ -69,6 +72,8 @@ public:
 	void Broadphase2(float msec);
 	void addAgent(PhysicsNode* a);
 	void addPlayer(PhysicsNode* p);
+
+	void init();
 
 protected:
 	vector<AIWorldPartition*> allPartitions;
@@ -86,4 +91,9 @@ protected:
 	vector<int> myAgentsPlayers[Agents::MAXAGENTS];
 
 	Ability agentAbilities[5];
+
+	Players* dev_players;
+	Agents* dev_agents;
 };
+
+#endif

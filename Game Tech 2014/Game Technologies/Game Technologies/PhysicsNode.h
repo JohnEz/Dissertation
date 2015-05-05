@@ -110,6 +110,8 @@ public:
 	//Rotation
 	void calculateRotation(float dT);
 
+	SceneNode*	target;
+
 protected:
 	bool useGravity;
 
@@ -125,7 +127,6 @@ protected:
 	Vector3		m_torque;
 	Matrix4     m_invInertia;
 
-	SceneNode*	target;  
 	CollisionVolume* vol;
 	bool atRest;
 

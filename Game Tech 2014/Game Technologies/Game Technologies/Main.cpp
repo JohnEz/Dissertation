@@ -29,6 +29,7 @@ _-_-_-_-_-_-_-""  ""
 #include <thread>
 #include "../../nclgl/Window.h"
 #include "MyGame.h"
+#include "Kernal.cuh"
 
 #pragma comment(lib, "nclgl.lib")
 
@@ -41,6 +42,13 @@ int Quit(bool pause = false, const string &reason = "") {
 		std::cout << reason << std::endl;
 		system("PAUSE");
 	}
+
+
+	cudaError_t cudaStatus;
+	cudaStatus = cudaDeviceReset();
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaDeviceReset failed!");
+    }
 
 	return 0;
 }

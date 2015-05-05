@@ -89,7 +89,7 @@ MyGame::MyGame()	{
 
 	playerCount = 3;
 
-
+	myAI.init();
 }
 
 MyGame::~MyGame(void)	{

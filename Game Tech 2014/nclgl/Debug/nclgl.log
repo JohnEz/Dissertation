@@ -1,9 +1,9 @@
-﻿Build started 02/05/2015 20:32:21.
-     1>Project "F:\My Documents\Work\Dissertation\Dissertation\Game Tech 2014\nclgl\nclgl.vcxproj" on node 2 (Build target(s)).
+﻿Build started 05/05/2015 13:11:38.
+     1>Project "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\nclgl\nclgl.vcxproj" on node 2 (Build target(s)).
      1>Lib:
-         nclgl.vcxproj -> F:\My Documents\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\nclgl.lib
-     1>Done Building Project "F:\My Documents\Work\Dissertation\Dissertation\Game Tech 2014\nclgl\nclgl.vcxproj" (Build target(s)).
+         nclgl.vcxproj -> D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\nclgl.lib
+     1>Done Building Project "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\nclgl\nclgl.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:00.29
+Time Elapsed 00:00:00.05

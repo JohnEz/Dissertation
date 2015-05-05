@@ -1,4 +1,5 @@
 #include "AIManager.h"
+#include "kernal.cuh"
 
 void (*states[MAX_STATESS]) (int* a, Players* players, Agents* agents, float msec);
 
@@ -344,6 +345,11 @@ AIManager::AIManager(int xNum, int yNum, int zNum, float height, float width, fl
 
 }
 
+void AIManager::init()
+{
+	//addDataToGPU(&myPlayers, &myAgents, dev_players, dev_agents);
+}
+
 void AIManager::Broadphase(Player* players[], vector<Agent*> allAgents, float msec)
 {
 	//loop for all world partitions
@@ -377,7 +383,7 @@ void AIManager::Broadphase2(float msec)
 {
 
 	for (int j = 0; j < agentCount; j++) {
-			myAgentsPlayers[j].clear();
+		myAgentsPlayers[j].clear();
 	}
 
 	//loop for all world partitions
@@ -387,7 +393,7 @@ void AIManager::Broadphase2(float msec)
 		//do the players
 		for (int j = 0; j < playerCount; j++) {
 
-			if (myPlayers.maxHP[j] > 0 && CheckBounding(*playerNodes[j], 0, allPartitions[i]->pos, halfDim))
+			if (!myPlayers.isDead[j] && myPlayers.maxHP[j] > 0 && CheckBounding(*playerNodes[j], 0, allPartitions[i]->pos, halfDim))
 			{
 				allPartitions[i]->myPlayers.push_back(j);
 			}
@@ -403,7 +409,7 @@ void AIManager::Broadphase2(float msec)
 				for (int k = 0; k < allPartitions[i]->myPlayers.size(); ++k) {
 					myAgentsPlayers[j].push_back(allPartitions[i]->myPlayers[k]);
 				}
-				
+
 			}
 		}
 	}
@@ -419,13 +425,17 @@ void AIManager::Broadphase2(float msec)
 
 void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
 {
-	Broadphase2(msec);
+	//Broadphase2(msec);
+
+	//init();
+	//runKernal(dev_players, dev_agents, agentCount, msec, myAgents.x, myAgents.y, myAgents.z);
+	addWithCuda(&myPlayers, &myAgents, agentCount, msec);
 
 	//set the node positions after updates
 	for (int i = 0; i < agentCount; ++i)
 	{
 		//run the state functions
-		states[myAgents.state[i]](&i, &myPlayers, &myAgents, msec);
+		//states[myAgents.state[i]](&i, &myPlayers, &myAgents, msec);
 		reduceCooldowns(&i, &myAgents, msec);
 
 		if (agentNodes[i] != NULL)
@@ -448,9 +458,17 @@ void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
 			{
 				// the player must be dead
 				myPlayers.isDead[i] = true;
+				if (playerNodes[i])
+				{
+					if (playerNodes[i]->target)
+					{
+						Renderer::GetRenderer().RemoveNode(playerNodes[i]->target);
+					}
+					PhysicsSystem::GetPhysicsSystem().RemoveNode(playerNodes[i]);
+				}
 			}
 		}
-		
+
 	}
 
 
@@ -504,6 +522,7 @@ void AIManager::addAgent(PhysicsNode* a)
 	myAgents.targetLocation[agentCount] = 0;
 
 	myAgents.patrolLocation[agentCount][0] = GenerateTargetLocation(a->GetPosition());	// start patrol
+	//myAgents.patrolLocation[agentCount][0] = Vector3(0, 0, 0);
 	myAgents.patrolLocation[agentCount][1] = GenerateTargetLocation(a->GetPosition());	// end patrol
 	myAgents.patrolLocation[agentCount][2] = Vector3(0, 0, 0);							// store location
 

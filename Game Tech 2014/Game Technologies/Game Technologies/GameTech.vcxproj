@@ -30,6 +30,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -53,6 +54,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>cudart.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -95,6 +97,7 @@
     <ClInclude Include="ExtendingMesh.h" />
     <ClInclude Include="GameClass.h" />
     <ClInclude Include="GameEntity.h" />
+    <ClInclude Include="Kernal.cuh" />
     <ClInclude Include="LightStorage.h" />
     <ClInclude Include="MeshStorage.h" />
     <ClInclude Include="MyGame.h" />
@@ -106,7 +109,11 @@
     <ClInclude Include="Spring.h" />
     <ClInclude Include="TextMesh.h" />
   </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="kernal.cu" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 6.5.targets" />
   </ImportGroup>
 </Project>
