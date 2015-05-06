@@ -141,9 +141,9 @@ void Renderer::RenderScene()	{
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-	DrawText("FPS :" + std::to_string(Performance::GetInstance()->getFPS()), Vector3(0,0,0), 16.0f);
-	DrawText("PPS :" + std::to_string(Performance::GetInstance()->getPPS()), Vector3(0,16.0f,0), 16.0f);
-	DrawText("Agents :" + std::to_string(Performance::GetInstance()->getScore()), Vector3(0,32.0f,0), 16.0f);
+	DrawText("FPS              :" + std::to_string(Performance::GetInstance()->getFPS()), Vector3(0,0,0), 16.0f);
+	DrawText("Agent Updates PS :" + std::to_string(Performance::GetInstance()->getPPS()), Vector3(0,16.0f,0), 16.0f);
+	DrawText("Agents  :" + std::to_string(Performance::GetInstance()->getScore()), Vector3(0,32.0f,0), 16.0f);
 	DrawText("Players :" + std::to_string(Performance::GetInstance()->getCollisions()), Vector3(0,48.0f,0), 16.0f);
 
 	FillBuffers();

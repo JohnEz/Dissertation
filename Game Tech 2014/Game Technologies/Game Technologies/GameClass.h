@@ -23,8 +23,6 @@ _-_-_-_-_-_-_-""  ""
 #include "Renderer.h"
 #include "PhysicsSystem.h"
 #include "GameEntity.h"
-#include "Agent.h"
-#include "Player.h"
 
 #include <vector>
 
@@ -50,8 +48,6 @@ protected:
 	float physicsCounter;
 
 	vector<GameEntity*> allEntities;
-	vector<Agent*> allAgents;
-	Player* allPlayers[Player::MAX_PLAYERS];
 
 	Camera* gameCamera;
 	static GameClass* instance;

@@ -1,5 +1,4 @@
 #include "MyGame.h"
-#include "Agent.h"
 
 GameEntity* MyGame::addEnt(const Vector3 pos, const Vector4 colour)
 {
@@ -33,7 +32,10 @@ MyGame::MyGame()	{
 	gameCamera = new Camera(0.0f, 3.142f / 2,Vector3(0,5000,0));
 
 	Renderer::GetRenderer().SetCamera(gameCamera);
-	myAI = AIManager(2,2,2, 14000, 14000, 14000);
+
+	AIManager::GetInstance()->init(1,1,1, 34000, 2000, 34000);
+
+	//myAI = AIManager(2,2,2, 14000, 14000, 14000);
 	
 
 	oldState = false;
@@ -48,35 +50,30 @@ MyGame::MyGame()	{
 	sphere	= new OBJMesh(MESHDIR"ico.obj");
 
 	//floor
-	allEntities.push_back(BuildQuadEntity(10000.0f));
+	allEntities.push_back(BuildQuadEntity(30000.0f));
 
 	//allEntities.push_back(BuildFloatSphereEntity(100.0f, Vector3(200, 300, 156)));
 
-	for (int i = 0; i < 3072; ++i)
+	for (int i = 0; i < 5120; ++i)
 	{
 		int x, y, z;
 
-		x = (rand() % 10000) - 5000;
+		x = (rand() % (WORLDSIZE*2)) - WORLDSIZE;
 		y = 50;
-		z = (rand() % 10000) - 5000;
+		z = (rand() % (WORLDSIZE*2)) - WORLDSIZE;
 		//allAgents.push_back(BuildAgent(Vector3(x, y, z)));
-		myAI.addAgent(addEnt(Vector3(x, y, z), Vector4(0,0,1,1))->physicsNode);
-	}
-
-	for (int i = 0; i < Player::MAX_PLAYERS; ++i)
-	{
-		allPlayers[i] = NULL;
+		AIManager::GetInstance()->addAgent(addEnt(Vector3(x, y, z), Vector4(0,0,1,1))->physicsNode);
 	}
 
 	
-	for (int i = 0; i < 0; ++i)
+	for (int i = 0; i < 40; ++i)
 	{
 		int x, y, z;
 
 		x = (rand() % 10000) - 5000;
 		y = 50;
 		z = (rand() % 10000) - 5000;
-		myAI.addPlayer(addEnt(Vector3(x, y, z), Vector4(1,0,0,1))->physicsNode);
+		AIManager::GetInstance()->addPlayer(addEnt(Vector3(x, y, z), Vector4(1,0,0,1))->physicsNode);
 	}
 
 	//myAI.addPlayer(addEnt(Vector3(100, 50, 100), Vector4(0,1,0,1))->physicsNode);
@@ -88,8 +85,6 @@ MyGame::MyGame()	{
 	//allPlayers[2] = BuildPlayer(Vector3(3000, 50, 300));
 
 	playerCount = 3;
-
-	myAI.init();
 }
 
 MyGame::~MyGame(void)	{
@@ -125,8 +120,6 @@ void MyGame::UpdateGame(float msec) {
 		(*i)->Update(allPlayers, msec);
 	}*/
 
-	myAI.update(allPlayers, allAgents, msec);
-
 	oldState = currentState;
 	currentState = Window::GetMouse()->ButtonDown(MOUSE_LEFT);
 
@@ -145,8 +138,6 @@ void MyGame::UpdateGame(float msec) {
 		norm.z = -cos(pitch) * cos(yaw);
 
 		norm.Normalise();
-
-		allPlayers[playerCount] = ShootPlayer(gameCamera->GetPosition(), norm * speed);
 		playerCount++;
 	}
 
@@ -328,6 +319,8 @@ GameEntity* MyGame::BuildQuadEntity(float size) {
 	p->SetCollisionVolume(new CollisionPlane(Vector3(0,1,0), 0));
 	GameEntity*g = new GameEntity(s, p);
 	g->ConnectToSystems();
+	g->Update(0);
+	p->Update(0);
 	return g;
 }
 
@@ -354,88 +347,4 @@ GameEntity* MyGame::BuildLeafEntity(float radius) {
 	GameEntity*g = new GameEntity(s, p);
 	g->ConnectToSystems();
 	return g;
-}
-
-Agent* MyGame::BuildAgent(const Vector3 pos)
-{
-	PhysicsNode*p = new PhysicsNode();
-
-	p->SetPosition(pos);
-	p->SetLinearVelocity(Vector3(0, 0, 0));
-	p->SetAngularVelocity(Vector3(0, 0, 0));
-
-	float I = 2.5f/(1.0f*25.0f*25.0f);
-	float elements[] = {I, 0, 0, 0, 0, I, 0, 0, 0, 0, I, 0, 0, 0, 0, 1};
-	Matrix4 mat = Matrix4(elements);
-	p->SetInverseInertia(mat);
-
-	p->SetInverseMass(1.0f);
-
-	p->SetCollisionVolume(new CollisionSphere(25.0f));
-
-	SceneNode* s = new SceneNode(sphere);
-
-	s->SetModelScale(Vector3(25.0f,25.0f,25.0f));
-	s->SetBoundingRadius(25.0f);
-	s->SetColour(Vector4(0,0,1,1));
-
-	Agent* a = new Agent(s, p);
-	a->ConnectToSystems();
-	return a;
-}
-
-Player* MyGame::BuildPlayer(const Vector3 pos)
-{
-	PhysicsNode*p = new PhysicsNode();
-
-	p->SetPosition(pos);
-	p->SetLinearVelocity(Vector3(0, 0, 0));
-	p->SetAngularVelocity(Vector3(0, 0, 0));
-
-	float I = 2.5f/(1.0f*25.0f*25.0f);
-	float elements[] = {I, 0, 0, 0, 0, I, 0, 0, 0, 0, I, 0, 0, 0, 0, 1};
-	Matrix4 mat = Matrix4(elements);
-	p->SetInverseInertia(mat);
-
-	p->SetInverseMass(1.0f);
-
-	p->SetCollisionVolume(new CollisionSphere(25.0f));
-
-	SceneNode* s = new SceneNode(sphere);
-
-	s->SetModelScale(Vector3(25.0f,25.0f,25.0f));
-	s->SetBoundingRadius(25.0f);
-	s->SetColour(Vector4(1,0,0,1));
-
-	Player* a = new Player(s, p, 8, 1000);
-	a->ConnectToSystems();
-	return a;
-}
-
-Player* MyGame::ShootPlayer(const Vector3 pos, const Vector3 vel)
-{
-	PhysicsNode*p = new PhysicsNode();
-
-	p->SetPosition(pos);
-	p->SetLinearVelocity(vel);
-	p->SetAngularVelocity(Vector3(0, 0, 0));
-
-	float I = 2.5f/(1.0f*25.0f*25.0f);
-	float elements[] = {I, 0, 0, 0, 0, I, 0, 0, 0, 0, I, 0, 0, 0, 0, 1};
-	Matrix4 mat = Matrix4(elements);
-	p->SetInverseInertia(mat);
-
-	p->SetInverseMass(1.0f);
-
-	p->SetCollisionVolume(new CollisionSphere(25.0f));
-
-	SceneNode* s = new SceneNode(sphere);
-
-	s->SetModelScale(Vector3(25.0f,25.0f,25.0f));
-	s->SetBoundingRadius(25.0f);
-	s->SetColour(Vector4(1,0,0,1));
-
-	Player* a = new Player(s, p, 8, 1000);
-	a->ConnectToSystems();
-	return a;
 }

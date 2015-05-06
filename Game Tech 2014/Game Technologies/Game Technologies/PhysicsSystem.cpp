@@ -1,4 +1,5 @@
 #include "PhysicsSystem.h"
+#include "AIManager.h"
 
 PhysicsSystem* PhysicsSystem::instance = 0;
 
@@ -76,12 +77,16 @@ PhysicsSystem::~PhysicsSystem(void)	{
 }
 
 void	PhysicsSystem::Update(float msec) {	
-	BroadPhaseCollisions();
+	/*BroadPhaseCollisions();
 	NarrowPhaseCollisions();
+
+
 
 	for(vector<PhysicsNode*>::iterator i = allNodes.begin(); i != allNodes.end(); ++i) {
 		(*i)->Update(msec);
-	}
+	}*/
+
+	AIManager::GetInstance()->update(msec);
 
 }
 

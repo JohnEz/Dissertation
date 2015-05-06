@@ -64,13 +64,7 @@ protected:
 
 	GameEntity* BuildStemEntity(Vector3 pos);
 
-	Agent* BuildAgent(const Vector3 pos);
-
 	GameEntity* addEnt(const Vector3 pos, const Vector4 colour);
-
-	Player* BuildPlayer(const Vector3 pos);
-
-	Player* ShootPlayer(const Vector3 pos, const Vector3 vel);
 
 	bool oldState;
 	bool currentState;
@@ -83,8 +77,5 @@ protected:
 	Mesh* sphere;
 
 	int playerCount;
-
-	AIManager myAI;
-
 };
 

@@ -1,7 +1,12 @@
 #include "AIManager.h"
 #include "kernal.cuh"
+#include "Renderer.h"
+#include "PhysicsSystem.h"
 
-void (*states[MAX_STATESS]) (int* a, Players* players, Agents* agents, float msec);
+void (*states[MAX_STATES]) (int* a, Players* players, Agents* agents, float msec);
+
+AIManager* AIManager::aiInst = 0;
+
 
 vector<AIWorldPartition*> createWorldPartitions(int xNum, int yNum, int zNum, float height, float width, float depth, const Vector3 halfDim)
 {
@@ -91,7 +96,7 @@ void Patrol(int* a, Players* players, Agents* agents, float msec)
 
 	int i = 0;
 	// loop through all the players
-	while (i < Players::MAXPLAYERS && agents->players[*a][i] > -1)
+	while (i < players->MAXPLAYERS && agents->players[*a][i] > -1)
 	{
 
 		//the player
@@ -106,10 +111,10 @@ void Patrol(int* a, Players* players, Agents* agents, float msec)
 
 		if (dist < aggroRange && !players->isDead[p])
 		{
-			agents->state[*a] = STARE_AT_PLAYERS; //change state
+			agents->state[*a] = STARE_AT_PLAYER; //change state
 			agents->patrolLocation[*a][2] = Vector3(agents->x[*a], agents->y[*a], agents->z[*a]); //set position it left patrol
 			agents->targetPlayer[*a] = p; // playing that is being stared at
-			i = Player::MAX_PLAYERS; // exit the loop
+			i = players->MAXPLAYERS; // exit the loop
 		}
 		i++;
 	}
@@ -130,7 +135,7 @@ void stareAtPlayer(int* a, Players* players, Agents* agents, float msec)
 
 	if (dist < pullRange && !players->isDead[p]) // if the player is in pull range
 	{
-		agents->state[*a] = CHASE_PLAYERS;
+		agents->state[*a] = CHASE_PLAYER;
 	}
 	else
 	{
@@ -166,7 +171,7 @@ void stareAtPlayer(int* a, Players* players, Agents* agents, float msec)
 		// if there are no close players at all
 		if (!playerClose)
 		{
-			agents->state[*a] = PATROLS;
+			agents->state[*a] = PATROL;
 			agents->targetPlayer[*a] = -1;
 		}
 	}
@@ -191,7 +196,7 @@ void chasePlayer(int* a, Players* players, Agents* agents, float msec)
 	// if its too far away or if the player died leash back
 	if (leashDist > LEASHRANGE || players->isDead[p])
 	{
-		agents->state[*a] = LEASHS;
+		agents->state[*a] = LEASH;
 		agents->targetPlayer[*a] = -1;
 	}
 	else
@@ -204,7 +209,7 @@ void chasePlayer(int* a, Players* players, Agents* agents, float msec)
 		//if close to player switch state to useability
 		if (dist < ATTACKRANGE)
 		{
-			agents->state[*a] = USE_ABILITYS;
+			agents->state[*a] = USE_ABILITY;
 		}
 
 		//move towards players location
@@ -240,7 +245,7 @@ void leashBack(int* a, Players* players, Agents* agents, float msec)
 	if (absX < 0.1f && absZ < 0.1f)
 	{
 		//change back to patrol
-		agents->state[*a] = PATROLS;
+		agents->state[*a] = PATROL;
 	}
 	else
 	{
@@ -265,7 +270,7 @@ void useAbility(int* a, Players* players, Agents* agents, float msec)
 
 	if (players->isDead[p]) // if the player is dead
 	{
-		agents->state[*a] = LEASHS;	//leash back
+		agents->state[*a] = LEASH;	//leash back
 		agents->targetPlayer[*a] = -1; // set the target player to null
 	}
 	else
@@ -297,7 +302,7 @@ void useAbility(int* a, Players* players, Agents* agents, float msec)
 		//if player close transition state to stare at player
 		if (dist > (ATTACKRANGE))
 		{
-			agents->state[*a] = CHASE_PLAYERS;
+			agents->state[*a] = CHASE_PLAYER;
 		}
 	}
 }
@@ -314,7 +319,7 @@ void reduceCooldowns(int* a, Agents* agents, float msec)
 }
 
 
-AIManager::AIManager(int xNum, int yNum, int zNum, float height, float width, float depth)
+/*AIManager::AIManager(int xNum, int yNum, int zNum, float height, float width, float depth)
 {
 	halfDim = Vector3(width / (xNum * 2), height / (yNum * 2), depth / (zNum * 2));
 
@@ -349,43 +354,55 @@ AIManager::AIManager(int xNum, int yNum, int zNum, float height, float width, fl
 	agentAbilities[4].damage = 9;
 	agentAbilities[4].targetEnemy = true;
 
-}
+}*/
 
-void AIManager::init()
+AIManager* AIManager::GetInstance()
 {
-	//addDataToGPU(&myPlayers, &myAgents, dev_players, dev_agents);
+	if (aiInst == 0)
+	{
+		aiInst = new AIManager();
+	}
+
+	return aiInst;
 }
 
-void AIManager::Broadphase(Player* players[], vector<Agent*> allAgents, float msec)
+void AIManager::init(int xNum, int yNum, int zNum, float height, float width, float depth)
 {
-	//loop for all world partitions
-	/*for (int i = 0; i < allPartitions.size(); i++) {
-	allPartitions[i]->myAgents.clear();
-	allPartitions[i]->myPlayers.clear();
+	halfDim = Vector3(width / (xNum * 2), height / (yNum * 2), depth / (zNum * 2));
 
-	//do the players
-	for (int j = 0; j < Player::MAX_PLAYERS; j++) {
-	Player* p = players[j];
-	if (p != NULL && CheckBounding(*p->physicsNode, 0, allPartitions[i]->pos, halfDim))
+	allPartitions = createWorldPartitions(xNum, yNum, zNum, height, width, depth, halfDim);
+
+	agentCount = 0;
+	playerCount = 0;
+
+	for (int i = 0; i < myAgents.MAXAGENTS; ++i)
 	{
-	allPartitions[i]->myPlayers.push_back(players[j]);
-	}
+		agentNodes[i] = NULL;
 	}
 
-	//add the agents and update the agents
-	for (int j = 0; j < allAgents.size(); j++) {
-	Agent* a = allAgents[j];
-	if (CheckBounding(*a->physicsNode, Agent::MAXAGGRORANGE, allPartitions[i]->pos, halfDim))
-	{
-	allPartitions[i]->myAgents.push_back(allAgents[j]);
-	allPartitions[i]->myPlayers.resize(Player::MAX_PLAYERS);
-	allAgents[j]->Update(&allPartitions[i]->myPlayers[0], msec);
-	}
-	}
-	}*/
+	states[PATROL] = Patrol;
+	states[STARE_AT_PLAYER] = stareAtPlayer;
+	states[CHASE_PLAYER] = chasePlayer;
+	states[LEASH] = leashBack;
+	states[USE_ABILITY] = useAbility;
+
+	agentAbilities[0] = Ability();
+	agentAbilities[0].maxCooldown = 20000.0f;
+	agentAbilities[0].damage = 240;
+	agentAbilities[0].targetEnemy = true;
+
+	agentAbilities[1] = Ability();
+	agentAbilities[1].maxCooldown = 14000.0f;
+	agentAbilities[1].damage = 140;
+	agentAbilities[1].targetEnemy = true;
+
+	agentAbilities[4] = Ability();
+	agentAbilities[4].maxCooldown = 1000.0f;
+	agentAbilities[4].damage = 9;
+	agentAbilities[4].targetEnemy = true;
 }
 
-void AIManager::Broadphase2(float msec)
+void AIManager::Broadphase(float msec)
 {
 
 	for (int j = 0; j < agentCount; j++) {
@@ -409,7 +426,7 @@ void AIManager::Broadphase2(float msec)
 		for (int j = 0; j < agentCount; j++) {
 
 			//check if the agent is in this partition
-			if (CheckBounding(*agentNodes[j], Agent::MAXAGGRORANGE, allPartitions[i]->pos, halfDim))
+			if (CheckBounding(*agentNodes[j], myAgents.AGGRORANGE, allPartitions[i]->pos, halfDim))
 			{
 				//for each player in this partition, add it to the list of players for the agent
 				for (int k = 0; k < allPartitions[i]->myPlayers.size(); ++k) {
@@ -429,12 +446,10 @@ void AIManager::Broadphase2(float msec)
 	}
 }
 
-void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
+void AIManager::update(float msec)
 {
-	//Broadphase2(msec);
+	Broadphase(msec);
 
-	//init();
-	//runKernal(dev_players, dev_agents, agentCount, msec, myAgents.x, myAgents.y, myAgents.z);
 	addWithCuda(&myPlayers, &myAgents, agentCount, msec);
 
 	//set the node positions after updates
@@ -446,8 +461,8 @@ void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
 
 		if (agentNodes[i] != NULL)
 		{
-			agentNodes[i]->SetPosition(Vector3(myAgents.x[i], myAgents.y[i], myAgents.z[i]));
-			//agentNodes[i]->target->SetTransform(BuildTransform(*agentNodes[i]));
+			//agentNodes[i]->SetPosition(Vector3(myAgents.x[i], myAgents.y[i], myAgents.z[i]));
+			agentNodes[i]->target->SetTransform(Matrix4::Translation(Vector3(myAgents.x[i], myAgents.y[i], myAgents.z[i])));
 		}
 	}
 
@@ -459,6 +474,7 @@ void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
 		{
 			//set the nodes position to the players position
 			playerNodes[i]->SetPosition(Vector3(myPlayers.x[i], myPlayers.y[i], myPlayers.z[i]));
+			playerNodes[i]->target->SetTransform(Matrix4::Translation(Vector3(myPlayers.x[i], myPlayers.y[i], myPlayers.z[i])));
 
 			// if the player's hp is 0
 			if (myPlayers.hp[i] < 1)
@@ -502,15 +518,19 @@ void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
 
 bool AIManager::CheckBounding(PhysicsNode& n, float aggroRange,Vector3 pos, Vector3 halfDim)
 {
-	float dist = abs(pos.x - n.GetPosition().x);
+	Vector3 nPos = n.target->GetTransform().GetPositionVector();
+
+	float dist = abs(pos.x - nPos.x);
 	float sum = halfDim.x + aggroRange;
 
+	
+
 	if(dist <= sum) {
-		dist = abs(pos.y - n.GetPosition().y);
+		dist = abs(pos.y - nPos.y);
 		sum = halfDim.y + aggroRange;
 
 		if(dist <= sum) {
-			dist = abs(pos.z - n.GetPosition().z);
+			dist = abs(pos.z - nPos.z);
 			sum = halfDim.z + aggroRange;
 
 			if(dist <= sum) {
@@ -524,7 +544,7 @@ bool AIManager::CheckBounding(PhysicsNode& n, float aggroRange,Vector3 pos, Vect
 
 void AIManager::addAgent(PhysicsNode* a)
 {
-	myAgents.state[agentCount] = PATROLS; // starting state
+	myAgents.state[agentCount] = PATROL; // starting state
 
 	myAgents.targetLocation[agentCount] = 0;
 
@@ -558,9 +578,9 @@ void AIManager::addPlayer(PhysicsNode* p)
 {
 	myPlayers.level[playerCount] = 100; //(rand() % 100) + 1; // randomly generate level
 
-	myPlayers.hp[playerCount] = 1000; //set hp
+	myPlayers.hp[playerCount] = 20000; //set hp
 
-	myPlayers.maxHP[playerCount] = 1000; //set the max hp
+	myPlayers.maxHP[playerCount] = 20000; //set the max hp
 
 	myPlayers.isDead[playerCount] = false; // make the player alive
 

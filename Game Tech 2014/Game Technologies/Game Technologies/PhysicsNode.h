@@ -43,7 +43,7 @@ _-_-_-_-_-_-_-""  ""
 #define LINEAR_VELOCITY_DAMP 0.998
 #define ANGULAR_VELOCITY_DAMP 0.998
 #define LINEAR_VELOCITY_MIN 0.001
-#define WORLDSIZE 10000
+#define WORLDSIZE 5000
 
 class PhysicsNode	{
 public:
