@@ -20,6 +20,8 @@ GameClass::~GameClass(void)	{
 void GameClass::UpdatePhysics(float msec) {
 	physicsCounter	+= msec;
 
+	Performance::GetInstance()->calculatePPS(msec);
+
 	PhysicsSystem::GetPhysicsSystem().Update(msec);
 }
 

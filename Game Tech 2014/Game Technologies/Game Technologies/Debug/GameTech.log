@@ -1,15 +1,14 @@
-﻿Build started 05/05/2015 17:11:01.
+﻿Build started 06/05/2015 13:39:21.
      1>Project "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\GameTech.vcxproj" on node 2 (Build target(s)).
        Project file contains ToolsVersion="12.0". This toolset may be unknown or missing, in which case you may be able to resolve this by installing the appropriate version of MSBuild, or the build may have been forced to a particular ToolsVersion for policy reasons. Treating the project as if it had ToolsVersion="4.0". For more information, please see http://go.microsoft.com/fwlink/?LinkId=291333.
      1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /ZI /nologo /W3 /WX- /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt AIManager.cpp Main.cpp
-         Main.cpp
-         AIManager.cpp
-     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\aimanager.cpp(150): warning C4244: 'initializing' : conversion from 'int' to 'float', possible loss of data
-     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\aimanager.cpp(390): warning C4018: '<' : signed/unsigned mismatch
-     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\aimanager.cpp(409): warning C4018: '<' : signed/unsigned mismatch
-     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\aimanager.cpp(419): warning C4018: '<' : signed/unsigned mismatch
-         Generating Code...
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /ZI /nologo /W3 /WX- /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt PhysicsNode.cpp
+         PhysicsNode.cpp
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicsnode.cpp(3): warning C4305: 'argument' : truncation from 'double' to 'const float'
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicsnode.cpp(112): warning C4305: 'argument' : truncation from 'double' to 'const float'
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicsnode.cpp(120): warning C4305: 'argument' : truncation from 'double' to 'const float'
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicsnode.cpp(126): warning C4305: 'argument' : truncation from 'double' to 'const float'
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicsnode.cpp(144): warning C4305: 'argument' : truncation from 'double' to 'const float'
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\GameTech.exe" /INCREMENTAL /NOLOGO /LIBPATH:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\lib\Win32" cudart.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\GameTech.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\GameTech.lib" /MACHINE:X86 Debug\kernal.cu.obj
          Debug\Agent.obj
@@ -34,4 +33,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:02.27
+Time Elapsed 00:00:01.09

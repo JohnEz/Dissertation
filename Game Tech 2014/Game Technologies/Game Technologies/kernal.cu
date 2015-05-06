@@ -5,9 +5,14 @@
 	return (T(0) < val) - (val < T(0));
 }*/
 
-__global__ void cudaPatrol(Players* players, Agents* agents, float msec)
+__global__ void cudaPatrol(Players* players, Agents* agents, float msec, const unsigned int size)
 {
-	int a = threadIdx.x;
+	int a = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (a > size)
+	{
+		return;
+	}
 
 	float MAXSPEED = 0.5F;
 
@@ -18,7 +23,7 @@ __global__ void cudaPatrol(Players* players, Agents* agents, float msec)
 	float absZ = abs(disZ);
 
 	//check its close enough to the point
-	if (absX < 10.1f && absZ < 10.1f)
+	if (absX < 0.1f && absZ < 0.1f)
 	{
 		//get new target
 		agents->targetLocation[a]++;
@@ -167,11 +172,15 @@ cudaError_t runKernal(Players *dev_players, Agents *dev_agents, int agentCount, 
 }
 
 // Helper function for using CUDA to add vectors in parallel.
-cudaError_t addWithCuda(Players* players, Agents* agents, unsigned int size, float msec)
+cudaError_t addWithCuda(Players* players, Agents* agents, const unsigned int size, float msec)
 {
     Players *dev_players = 0;
 	Agents *dev_agents = 0;
     cudaError_t cudaStatus;
+	int blockSize;      // The launch configurator returned block size 
+    int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
+    int gridSize;       // The actual grid size needed, based on input size 
+
 
     // Choose which GPU to run on, change this on a multi-GPU system.
     cudaStatus = cudaSetDevice(0);
@@ -206,8 +215,18 @@ cudaError_t addWithCuda(Players* players, Agents* agents, unsigned int size, flo
         goto Error;
     }
 
-    // Launch a kernel on the GPU with one thread for each element.
-	cudaPatrol<<<1, size>>>(dev_players, dev_agents, msec);
+	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaPatrol, 0, size);
+
+	// Round up according to array size 
+	gridSize = (size + blockSize - 1) / blockSize;
+
+	//cudaOccupancyMaxActiveBlocksPerMultiprocessor(&minGridSize, cudaPatrol, blockSize, 0);
+
+	// Launch a kernel on the GPU with one thread for each element.
+	cudaPatrol<<<gridSize, blockSize>>>(dev_players, dev_agents, msec, size);
+
+
+    
 
     // Check for any errors launching the kernel
     cudaStatus = cudaGetLastError();

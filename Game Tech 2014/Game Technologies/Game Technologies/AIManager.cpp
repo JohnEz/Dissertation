@@ -36,7 +36,13 @@ template <typename T> int sgn(T val) {
 	return (T(0) < val) - (val < T(0));
 }
 
+Matrix4		BuildTransform(const PhysicsNode &node) {
+	Matrix4 m = node.GetOrientation().ToMatrix();
 
+	m.SetPositionVector(node.GetPosition());
+
+	return m;
+}
 
 Vector3 GenerateTargetLocation(const Vector3& position)
 {
@@ -441,6 +447,7 @@ void AIManager::update(Player* players[], vector<Agent*> allAgents, float msec)
 		if (agentNodes[i] != NULL)
 		{
 			agentNodes[i]->SetPosition(Vector3(myAgents.x[i], myAgents.y[i], myAgents.z[i]));
+			//agentNodes[i]->target->SetTransform(BuildTransform(*agentNodes[i]));
 		}
 	}
 

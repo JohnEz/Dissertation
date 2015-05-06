@@ -42,7 +42,7 @@ struct Players {
 };
 
 struct Agents {
-	static const int MAXAGENTS = 1000;
+	static const int MAXAGENTS = 4000;
 	static const int AGGRORANGE = 1000;
 	static const int MAXABILITIES = 3;
 
@@ -57,7 +57,7 @@ struct Agents {
 	float y[MAXAGENTS];
 	float z[MAXAGENTS];
 
-	int players[MAXAGENTS][Players::MAXPLAYERS];
+	int players[MAXAGENTS][1];
 };
 
 class AIManager {
