@@ -42,7 +42,7 @@ __device__ void cudaPatrol(Players* players, Agents* agents, float msec, const u
 
 	//state transition
 
-	int i = 0;
+	/*int i = 0;
 	// loop through all the players
 	while (i < players->MAXPLAYERS && agents->players[a][i] > -1)
 	{
@@ -73,7 +73,7 @@ __device__ void cudaPatrol(Players* players, Agents* agents, float msec, const u
 			i = players->MAXPLAYERS; // exit the loop
 		}
 		i++;
-	}
+	}*/
 }
 
 __device__ void cudaStareAtPlayer(Players* players, Agents* agents, float msec, const unsigned int size)

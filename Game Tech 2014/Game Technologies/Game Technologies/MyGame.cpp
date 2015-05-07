@@ -54,7 +54,7 @@ MyGame::MyGame()	{
 
 	//allEntities.push_back(BuildFloatSphereEntity(100.0f, Vector3(200, 300, 156)));
 
-	for (int i = 0; i < 5120; ++i)
+	for (int i = 0; i < 1024 * 80; ++i)
 	{
 		int x, y, z;
 
@@ -62,7 +62,11 @@ MyGame::MyGame()	{
 		y = 50;
 		z = (rand() % (WORLDSIZE*2)) - WORLDSIZE;
 		//allAgents.push_back(BuildAgent(Vector3(x, y, z)));
-		AIManager::GetInstance()->addAgent(addEnt(Vector3(x, y, z), Vector4(0,0,1,1))->physicsNode);
+
+		float blue = (rand() % 80) + 20;
+		float green = (rand() % 80) + 20;
+
+		AIManager::GetInstance()->addAgent(addEnt(Vector3(x, y, z), Vector4(0,green / 100, blue / 100,1))->physicsNode);
 	}
 
 	

@@ -41,7 +41,7 @@ struct Players {
 };
 
 struct Agents {
-	static const int MAXAGENTS = 5121;
+	static const int MAXAGENTS = 1024 * 80 + 1;
 	static const int AGGRORANGE = 1000;
 	static const int MAXABILITIES = 3;
 

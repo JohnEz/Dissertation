@@ -448,7 +448,7 @@ void AIManager::Broadphase(float msec)
 
 void AIManager::update(float msec)
 {
-	Broadphase(msec);
+	//Broadphase(msec);
 
 	addWithCuda(&myPlayers, &myAgents, agentCount, msec);
 
@@ -487,7 +487,7 @@ void AIManager::update(float msec)
 					{
 						Renderer::GetRenderer().RemoveNode(playerNodes[i]->target);
 					}
-					PhysicsSystem::GetPhysicsSystem().RemoveNode(playerNodes[i]);
+					//PhysicsSystem::GetPhysicsSystem().RemoveNode(playerNodes[i]);
 				}
 			}
 		}
