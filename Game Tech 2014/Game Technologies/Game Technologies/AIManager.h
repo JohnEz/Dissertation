@@ -4,11 +4,6 @@
 #ifndef AIMANAGER
 #define AIMANAGER
 
-struct AIWorldPartition{
-	Vector3 pos;
-	vector<int> myPlayers;
-};
-
 enum State {
 	PATROL,
 	STARE_AT_PLAYER,
@@ -59,6 +54,12 @@ struct Agents {
 	int players[MAXAGENTS][40];
 };
 
+struct AIWorldPartition {
+	Vector3 pos;
+	int myPlayers[Players::MAXPLAYERS];
+	int playerCount;
+};
+
 class AIManager {
 public:
 	//AIManager(){};
@@ -81,7 +82,8 @@ protected:
 
 	static AIManager* aiInst;
 
-	vector<AIWorldPartition*> allPartitions;
+	vector<AIWorldPartition> allPartitions;
+	AIWorldPartition* myPartitions;
 	Vector3 halfDim;
 
 	Agents myAgents;
@@ -89,6 +91,7 @@ protected:
 
 	int agentCount;
 	int playerCount;
+	int partitionCount;
 
 	PhysicsNode* playerNodes[Players::MAXPLAYERS];
 	PhysicsNode* agentNodes[Agents::MAXAGENTS];
@@ -96,9 +99,6 @@ protected:
 	vector<int> myAgentsPlayers[Agents::MAXAGENTS];
 
 	Ability agentAbilities[5];
-
-	Players* dev_players;
-	Agents* dev_agents;
 
 
 };
