@@ -22,7 +22,7 @@ struct Ability {
 
 struct Players {
 
-	static const int MAXPLAYERS = 100;
+	static const int MAXPLAYERS = 5000;
 
 	int level[MAXPLAYERS];
 	int hp[MAXPLAYERS];
@@ -35,8 +35,16 @@ struct Players {
 	
 };
 
+struct AIWorldPartition {
+	static const int MAXPARTITIONS = 100;
+	Vector3 pos[MAXPARTITIONS];
+	short* myPlayers;
+	int playerCount[MAXPARTITIONS];
+};
+
 struct Agents {
-	static const int MAXAGENTS = 1024 * 80 + 1;
+	static const int MAXAGENTS = 1024 * 40 + 1;
+	static const int MAXPLAYERS = 5000;
 	static const int AGGRORANGE = 1000;
 	static const int MAXABILITIES = 3;
 
@@ -51,14 +59,13 @@ struct Agents {
 	float y[MAXAGENTS];
 	float z[MAXAGENTS];
 
-	int players[MAXAGENTS][40];
+	int players[MAXAGENTS][MAXPLAYERS/2];
+
+	short* partitions;
+
 };
 
-struct AIWorldPartition {
-	Vector3 pos;
-	int myPlayers[Players::MAXPLAYERS];
-	int playerCount;
-};
+
 
 class AIManager {
 public:
@@ -83,11 +90,11 @@ protected:
 	static AIManager* aiInst;
 
 	vector<AIWorldPartition> allPartitions;
-	AIWorldPartition* myPartitions;
 	Vector3 halfDim;
 
 	Agents myAgents;
 	Players myPlayers;
+	AIWorldPartition myPartitions;
 
 	int agentCount;
 	int playerCount;

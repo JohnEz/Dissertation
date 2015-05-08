@@ -8,7 +8,7 @@ void (*states[MAX_STATES]) (int* a, Players* players, Agents* agents, float msec
 AIManager* AIManager::aiInst = 0;
 
 
-vector<AIWorldPartition> createWorldPartitions(int xNum, int yNum, int zNum, float height, float width, float depth, const Vector3 halfDim)
+/*vector<AIWorldPartition> createWorldPartitions(int xNum, int yNum, int zNum, float height, float width, float depth, const Vector3 halfDim)
 {
 	//get position locations
 	float xDiff = width / (xNum);
@@ -30,6 +30,36 @@ vector<AIWorldPartition> createWorldPartitions(int xNum, int yNum, int zNum, flo
 				AIWorldPartition world = AIWorldPartition();
 				world.pos = Vector3((xDiff * i) - xHalf - halfDim.x, (yDiff * j) - yHalf - halfDim.x, (zDiff * k) - zHalf - halfDim.x);
 				partitions.push_back(world);
+			}
+		}
+	}
+
+	return partitions;
+}*/
+
+AIWorldPartition createWorldPartitions(int xNum, int yNum, int zNum, float height, float width, float depth, const Vector3 halfDim)
+{
+	//get position locations
+	float xDiff = width / (xNum);
+	float yDiff = height / (yNum);
+	float zDiff = depth / (zNum);
+
+	float xHalf = width / 2;
+	float yHalf = height / 2;
+	float zHalf = depth / 2;
+
+	AIWorldPartition partitions;
+
+	int count = 0;
+
+	for (int i = 1; i <= xNum; ++i)
+	{
+		for (int j = 1; j <= yNum; ++j)
+		{
+			for (int k = 1; k <= zNum; ++k)
+			{
+				partitions.pos[count] = Vector3((xDiff * i) - xHalf - halfDim.x, (yDiff * j) - yHalf - halfDim.y, (zDiff * k) - zHalf - halfDim.z);
+				++count;
 			}
 		}
 	}
@@ -370,10 +400,9 @@ void AIManager::init(int xNum, int yNum, int zNum, float height, float width, fl
 {
 	halfDim = Vector3(width / (xNum * 2), height / (yNum * 2), depth / (zNum * 2));
 
-	allPartitions = createWorldPartitions(xNum, yNum, zNum, height, width, depth, halfDim);
-
-	partitionCount = allPartitions.size();
-	myPartitions = &allPartitions[0];
+	myPartitions;
+	myPartitions = AIWorldPartition();
+	myPartitions = createWorldPartitions(xNum, yNum, zNum, height, width, depth, halfDim);
 
 	agentCount = 0;
 	playerCount = 0;
@@ -403,52 +432,51 @@ void AIManager::init(int xNum, int yNum, int zNum, float height, float width, fl
 	agentAbilities[4].maxCooldown = 1000.0f;
 	agentAbilities[4].damage = 9;
 	agentAbilities[4].targetEnemy = true;
+
+	int size = myAgents.MAXAGENTS*8;
+	myAgents.partitions = new short[size];
+	myPartitions.myPlayers = new short[myPartitions.MAXPARTITIONS*Players::MAXPLAYERS];
 }
 
 void AIManager::Broadphase(float msec)
 {
 
-	for (int j = 0; j < agentCount; j++) {
+	for (int j = 0; j < agentCount; ++j) {
 		myAgentsPlayers[j].clear();
 	}
 
-	//loop for all world partitions
-	for (int i = 0; i < allPartitions.size(); i++) {
+	memset(myPartitions.myPlayers, -1, Players::MAXPLAYERS * sizeof(short));
 
-		allPartitions[i].playerCount = 0;
-		memset(allPartitions[i].myPlayers, -1, Players::MAXPLAYERS * sizeof(int));
+	//loop for all world partitions
+	for (int i = 0; i < myPartitions.MAXPARTITIONS; ++i) {
+
+		myPartitions.playerCount[i] = 0;
 
 		//do the players
 		for (int j = 0; j < playerCount; j++) {
 
-			if (!myPlayers.isDead[j] && myPlayers.maxHP[j] > 0 && CheckBounding(*playerNodes[j], 0, allPartitions[i].pos, halfDim))
+			if (!myPlayers.isDead[j] && myPlayers.maxHP[j] > 0 && CheckBounding(*playerNodes[j], 0, myPartitions.pos[i], halfDim))
 			{
-				allPartitions[i].myPlayers[allPartitions[i].playerCount] = j;
-				++allPartitions[i].playerCount;
+				myPartitions.myPlayers[(i*myPlayers.MAXPLAYERS) + myPartitions.playerCount[i]] = j;
+				++myPartitions.playerCount[i];
 			}
 		}
 
-		//add the agents and update the agents
-		for (int j = 0; j < agentCount; j++) {
-
-			//check if the agent is in this partition
-			if (CheckBounding(*agentNodes[j], myAgents.AGGRORANGE, allPartitions[i].pos, halfDim))
-			{
-				//for each player in this partition, add it to the list of players for the agent
-				for (int k = 0; k < allPartitions[i].playerCount; ++k) {
-					myAgentsPlayers[j].push_back(allPartitions[i].myPlayers[k]);
-				}
-
-			}
-		}
 	}
 
-	//convert the list into an array in the struct for cuda
+	int p = 0;
+	//add the agents and update the agents
 	for (int i = 0; i < agentCount; ++i) {
-		for (int j = 0; j < myAgentsPlayers[i].size(); ++j)
-		{
-			myAgents.players[i][j] = myAgentsPlayers[i][j];
+		p = 0;
+		for (int j = 0; j < myPartitions.MAXPARTITIONS; ++j) {
+			//check if the agent is in this partition
+			if (myPartitions.pos[j] != Vector3(0,0,0) && CheckBounding(*agentNodes[i], myAgents.AGGRORANGE, myPartitions.pos[j], halfDim))
+			{
+				myAgents.partitions[(i*8) + p] = j;
+				++p;
+			}
 		}
+
 	}
 }
 
@@ -459,7 +487,7 @@ void AIManager::update(float msec)
 	Players* d_players;
 	Agents* d_agents;
 
-	cudaUpdateAgents(&myPlayers, &myAgents, agentCount, msec, myPartitions, partitionCount, &halfDim);
+	//cudaUpdateAgents(&myPlayers, &myAgents, agentCount, msec, &myPartitions, partitionCount, &halfDim);
 
 	//addDataToGPU(&myPlayers, &myAgents, agentCount, msec, d_players, d_agents);
 	//runKernal(&myPlayers, &myAgents, agentCount, msec, d_players, d_agents);
@@ -469,7 +497,7 @@ void AIManager::update(float msec)
 	for (int i = 0; i < agentCount; ++i)
 	{
 		//run the state functions
-		//states[myAgents.state[i]](&i, &myPlayers, &myAgents, msec);
+		states[myAgents.state[i]](&i, &myPlayers, &myAgents, msec);
 		reduceCooldowns(&i, &myAgents, msec);
 
 		if (agentNodes[i] != NULL)
@@ -506,6 +534,8 @@ void AIManager::update(float msec)
 		}
 
 	}
+
+	Broadphase(msec);
 
 
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))
@@ -580,11 +610,15 @@ void AIManager::addAgent(PhysicsNode* a)
 
 	agentNodes[agentCount] = a; // store the physic nodes for updating after cuda
 
+	memset(myAgents.players[agentCount], -1, 5000 * sizeof(int));
+
 	if (agentCount < Agents::MAXAGENTS - 1) // TODO probably should move this to the top
 	{
 		agentCount++;
 	}
 	Performance::GetInstance()->setScore(agentCount);
+
+	
 }
 
 void AIManager::addPlayer(PhysicsNode* p)
