@@ -1,27 +1,17 @@
-﻿Build started 08/05/2015 21:10:54.
+﻿Build started 08/05/2015 21:29:05.
      1>Project "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\GameTech.vcxproj" on node 2 (Build target(s)).
        Project file contains ToolsVersion="12.0". This toolset may be unknown or missing, in which case you may be able to resolve this by installing the appropriate version of MSBuild, or the build may have been forced to a particular ToolsVersion for policy reasons. Treating the project as if it had ToolsVersion="4.0". For more information, please see http://go.microsoft.com/fwlink/?LinkId=291333.
-     1>AddCudaCompileDeps:
-         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D_MBCS /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\bin" /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /I. /FIcuda_runtime.h /c "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\kernal.cu" 
-       CudaBuild:
-         Compiling CUDA source file kernal.cu...
-         cmd.exe /C "C:\Users\B1030516\AppData\Local\Temp\tmp778371f4568840e3b6be78f07b2f384d.cmd"
-         "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\bin\nvcc.exe" -gencode=arch=compute_20,code=\"sm_20,compute_20\" --use-local-env --cl-version 2012 -ccbin "C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin"  -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include"     --keep-dir Release -maxrregcount=0  --machine 32 --compile -cudart static     -D_MBCS -Xcompiler "/EHsc /W3 /nologo /O2 /Zi  /MD  " -o Release\kernal.cu.obj "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\kernal.cu"
-         
-         D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\bin\nvcc.exe" -gencode=arch=compute_20,code=\"sm_20,compute_20\" --use-local-env --cl-version 2012 -ccbin "C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin"  -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include"     --keep-dir Release -maxrregcount=0  --machine 32 --compile -cudart static     -D_MBCS -Xcompiler "/EHsc /W3 /nologo /O2 /Zi  /MD  " -o Release\kernal.cu.obj "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\kernal.cu" 
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(70): warning : variable "i" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(307): warning : variable "pa" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(339): warning : variable "a" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(440): warning : variable "gridSize" was set but never used
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(504): warning : variable "gridSize" was set but never used
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(602): warning : variable "gridSize" was set but never used
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(70): warning : variable "i" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(307): warning : variable "pa" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(339): warning : variable "a" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(440): warning : variable "gridSize" was set but never used
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(504): warning : variable "gridSize" was set but never used
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(602): warning : variable "gridSize" was set but never used
-         kernal.cu
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D _MBCS /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt AIManager.cpp
+         AIManager.cpp
+     1>AIManager.cpp(229): warning C4244: 'initializing' : conversion from 'int' to 'float', possible loss of data
+     1>AIManager.cpp(359): warning C4244: '=' : conversion from 'int' to 'float', possible loss of data
+     1>AIManager.cpp(462): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>AIManager.cpp(467): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>AIManager.cpp(472): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>AIManager.cpp(511): warning C4244: 'argument' : conversion from 'const int' to 'float', possible loss of data
+     1>AIManager.cpp(526): warning C4101: 'd_agents' : unreferenced local variable
+     1>AIManager.cpp(525): warning C4101: 'd_players' : unreferenced local variable
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Release\GameTech.exe" /NOLOGO /LIBPATH:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\lib\Win32" cudart.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Release\GameTech.pdb" /OPT:REF /OPT:ICF /LTCG /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Release\GameTech.lib" /MACHINE:X86 /SAFESEH Release\kernal.cu.obj
          Release\AIManager.obj
@@ -66,4 +56,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:07.36
+Time Elapsed 00:00:02.10

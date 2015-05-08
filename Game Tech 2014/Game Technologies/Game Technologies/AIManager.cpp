@@ -661,9 +661,9 @@ void AIManager::addPlayer(PhysicsNode* p)
 {
 	myPlayers.level[playerCount] = 100; //(rand() % 100) + 1; // randomly generate level
 
-	myPlayers.hp[playerCount] = 20000; //set hp
+	myPlayers.hp[playerCount] = 2000; //set hp
 
-	myPlayers.maxHP[playerCount] = 20000; //set the max hp
+	myPlayers.maxHP[playerCount] = 2000; //set the max hp
 
 	myPlayers.isDead[playerCount] = false; // make the player alive
 

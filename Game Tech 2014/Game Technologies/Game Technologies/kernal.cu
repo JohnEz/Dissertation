@@ -2,7 +2,7 @@
 #include <cmath>
 
 /*__device__ template <typename T> int sgn(T val) {
-	return (T(0) < val) - (val < T(0));
+return (T(0) < val) - (val < T(0));
 }*/
 
 //TODO CHANGE EVERYTHING TO POINTERS, WHY DIDNT I DO THAT IN THE FIRST PLACE
@@ -68,42 +68,78 @@ __device__ void cudaPatrol(Players* players, Agents* agents, short* agentsPartit
 	//state transition
 
 	int i = 0;
+	while (i < 8 && agentsPartitions[((a)*8) + i] != -1)
+	{
+		int j = 0;
+		int part = agentsPartitions[(a*8) + i];
+		int partPlayer = (part*players->MAXPLAYERS);
+		while (j < players->MAXPLAYERS && partitionsPlayers[partPlayer+j] != -1)
+		{
+			//the player
+			short p = partitionsPlayers[partPlayer+j];
+			//calculate distance to player
+			float3 diff = float3();
+
+			diff.x = players->x[p] - agents->x[a];
+			diff.y = players->y[p] - agents->y[a];
+			diff.z = players->z[p] - agents->z[a];
+
+			float dist = sqrtf((diff.x*diff.x)+(diff.y*diff.y)+(diff.z*diff.z));
+
+
+
+			//if player close transition state to stare at player
+			float aggroRange = min(agents->AGGRORANGE, agents->AGGRORANGE * ((float)agents->level[a] / (float)players->level[p]));
+
+			if (dist < aggroRange && !players->isDead[p])
+			{
+				agents->state[a] = STARE_AT_PLAYER; //change state
+				agents->patrolLocation[a][2].x = agents->x[a];
+				agents->patrolLocation[a][2].y = agents->y[a];
+				agents->patrolLocation[a][2].z = agents->z[a]; //set position it left patrol
+				agents->targetPlayer[a] = p; // playing that is being stared at
+				i = players->MAXPLAYERS; // exit the loop
+			}
+			++j;
+		}
+		++i;
+	}
 	// loop through all the players
 	/*while (i < players->MAXPLAYERS && agents->players[a][i] > -1)
 	{
 
-		//the player
-		int p = agents->players[a][i];
-		//calculate distance to player
-		float3 diff = float3();
+	//the player
+	int p = agents->players[a][i];
+	//calculate distance to player
+	float3 diff = float3();
 
-		diff.x = players->x[p] - agents->x[a];
-		diff.y = players->y[p] - agents->y[a];
-		diff.z = players->z[p] - agents->z[a];
+	diff.x = players->x[p] - agents->x[a];
+	diff.y = players->y[p] - agents->y[a];
+	diff.z = players->z[p] - agents->z[a];
 
-		float dist = sqrtf((diff.x*diff.x)+(diff.y*diff.y)+(diff.z*diff.z));
-	
+	float dist = sqrtf((diff.x*diff.x)+(diff.y*diff.y)+(diff.z*diff.z));
 
 
-		//if player close transition state to stare at player
-		float aggroRange = min(agents->AGGRORANGE, agents->AGGRORANGE * ((float)agents->level[a] / (float)players->level[p]));
 
-		if (dist < aggroRange && !players->isDead[p])
-		{
-			agents->state[a] = STARE_AT_PLAYER; //change state
-			agents->patrolLocation[a][2].x = agents->x[a];
-			agents->patrolLocation[a][2].y = agents->y[a];
-			agents->patrolLocation[a][2].z = agents->z[a]; //set position it left patrol
-			agents->targetPlayer[a] = p; // playing that is being stared at
-			i = players->MAXPLAYERS; // exit the loop
-		}
-		i++;
+	//if player close transition state to stare at player
+	float aggroRange = min(agents->AGGRORANGE, agents->AGGRORANGE * ((float)agents->level[a] / (float)players->level[p]));
+
+	if (dist < aggroRange && !players->isDead[p])
+	{
+	agents->state[a] = STARE_AT_PLAYER; //change state
+	agents->patrolLocation[a][2].x = agents->x[a];
+	agents->patrolLocation[a][2].y = agents->y[a];
+	agents->patrolLocation[a][2].z = agents->z[a]; //set position it left patrol
+	agents->targetPlayer[a] = p; // playing that is being stared at
+	i = players->MAXPLAYERS; // exit the loop
+	}
+	i++;
 	}*/
 }
 
 __device__ void cudaStareAtPlayer(Players* players, Agents* agents, short* agentsPartitions, short* partitionsPlayers, float msec, const unsigned int size)
 {
-	/*int a = blockIdx.x * blockDim.x + threadIdx.x;
+	int a = blockIdx.x * blockDim.x + threadIdx.x;
 
 	int p = agents->targetPlayer[a]; // target player
 
@@ -128,30 +164,36 @@ __device__ void cudaStareAtPlayer(Players* players, Agents* agents, short* agent
 		// if the player isnt in pull range check if there are any players closer
 		bool playerClose = false;
 		int i = 0;
-
-		//loop through the players
-		while (i < players->MAXPLAYERS && agents->players[a][i] > -1)
+		while (i < 8 && agentsPartitions[((a)*8) + i] != -1)
 		{
-			int p2 = agents->players[a][i];
-
-			//calculate distance to player
-			float3 diffNew = float3();
-			diffNew.x = players->x[p2] - agents->x[a];
-			diffNew.y = players->y[p2] - agents->y[a];
-			diffNew.z = players->z[p2] - agents->z[a];
-			float distNew = sqrtf((diffNew.x*diffNew.x)+(diffNew.y*diffNew.y)+(diffNew.z*diffNew.z));
-
-			// if the new distance is less switch targte
-			if (distNew <= dist  && !players->isDead[p2])
+			int j = 0;
+			int part = agentsPartitions[(a*8) + i];
+			int partPlayer = (part*players->MAXPLAYERS);
+			while (j < players->MAXPLAYERS && partitionsPlayers[partPlayer+j] != -1)
 			{
-				agents->targetPlayer[a] = p2;
-				dist = distNew;
-				float aggroRangeNew = min(agents->AGGRORANGE, agents->AGGRORANGE * (agents->level[a] / players->level[p2]));
+				//the player
+				short p2 = partitionsPlayers[partPlayer+j];
 
-				if (dist < aggroRangeNew)
+				//calculate distance to player
+				float3 diffNew = float3();
+				diffNew.x = players->x[p2] - agents->x[a];
+				diffNew.y = players->y[p2] - agents->y[a];
+				diffNew.z = players->z[p2] - agents->z[a];
+				float distNew = sqrtf((diffNew.x*diffNew.x)+(diffNew.y*diffNew.y)+(diffNew.z*diffNew.z));
+
+				// if the new distance is less switch targte
+				if (distNew <= dist  && !players->isDead[p2])
 				{
-					playerClose = true;
+					agents->targetPlayer[a] = p2;
+					dist = distNew;
+					float aggroRangeNew = min(agents->AGGRORANGE, agents->AGGRORANGE * (agents->level[a] / players->level[p2]));
+
+					if (dist < aggroRangeNew)
+					{
+						playerClose = true;
+					}
 				}
+				++j;
 			}
 			++i;
 		}
@@ -162,13 +204,13 @@ __device__ void cudaStareAtPlayer(Players* players, Agents* agents, short* agent
 			agents->state[a] = PATROL;
 			agents->targetPlayer[a] = -1;
 		}
-	}*/
+	}
 }
 
 __device__ void cudaChasePlayer(Players* players, Agents* agents, float msec, const unsigned int size)
 {
 	int a = blockIdx.x * blockDim.x + threadIdx.x;
-	
+
 	float LEASHRANGE = 3200.0f;
 	float ATTACKRANGE = 75.0f;
 	float MAXSPEED = 0.5F;
@@ -319,17 +361,17 @@ __global__ void cudaBroadphasePlayers(Players* players, AIWorldPartition* partit
 
 	for (int i = 0; i < players->MAXPLAYERS; ++i)
 	{
-		//get player pos in float3
-		float3 nPos = float3();
-		nPos.x = players->x[i];
-		nPos.y = players->y[i];
-		nPos.z = players->z[i];
+	//get player pos in float3
+	float3 nPos = float3();
+	nPos.x = players->x[i];
+	nPos.y = players->y[i];
+	nPos.z = players->z[i];
 
-		if (CheckBounding(nPos, 0, pPos, hDim))
-		{
-			partitions[pa].myPlayers[partitions[pa].playerCount] = i;
-			++partitions[pa].playerCount;
-		}
+	if (CheckBounding(nPos, 0, pPos, hDim))
+	{
+	partitions[pa].myPlayers[partitions[pa].playerCount] = i;
+	++partitions[pa].playerCount;
+	}
 	}*/
 
 }
@@ -352,19 +394,19 @@ __global__ void cudaBroadphaseAgents(Agents* agents, AIWorldPartition* partition
 	//loop through the partitions
 	for (int i = 0; i < partitionCount; ++i)
 	{
-		float3 pPos = float3();
-		pPos.x = partitions[i].pos.x;
-		pPos.y = partitions[i].pos.y;
-		pPos.z = partitions[i].pos.z;
+	float3 pPos = float3();
+	pPos.x = partitions[i].pos.x;
+	pPos.y = partitions[i].pos.y;
+	pPos.z = partitions[i].pos.z;
 
-		//if the agent is in the partition
-		if (CheckBounding(nPos, agents->AGGRORANGE, pPos, hDim)) {
-			//loop through all the players and copy them to the agent
-			for (int j = 0; j < partitions[i].playerCount; ++j)
-			{
-				agents->players[a][j] = partitions[i].myPlayers[j];
-			}
-		}
+	//if the agent is in the partition
+	if (CheckBounding(nPos, agents->AGGRORANGE, pPos, hDim)) {
+	//loop through all the players and copy them to the agent
+	for (int j = 0; j < partitions[i].playerCount; ++j)
+	{
+	agents->players[a][j] = partitions[i].myPlayers[j];
+	}
+	}
 	}*/
 }
 
@@ -391,43 +433,43 @@ __global__ void cudaFSM(Players* players, Agents* agents, short* agentsPartition
 //put the data onto the GPU
 cudaError_t addDataToGPU(Players* players, Agents* agents, unsigned int size, float msec, Players* d_players, Agents* d_agents)
 {
-    d_players = 0;
+	d_players = 0;
 	d_agents = 0;
 	//Agents* dev_agents = 0;
-    cudaError_t cudaStatus;
+	cudaError_t cudaStatus;
 
-    // Choose which GPU to run on, change this on a multi-GPU system.
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
+	// Choose which GPU to run on, change this on a multi-GPU system.
+	cudaStatus = cudaSetDevice(0);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
 		return cudaStatus;
-    }
+	}
 
-    // Allocate GPU buffers for three vectors (two input, one output)    .
-    cudaStatus = cudaMalloc((void**)&d_agents, sizeof(Agents));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed 1!");
+	// Allocate GPU buffers for three vectors (two input, one output)    .
+	cudaStatus = cudaMalloc((void**)&d_agents, sizeof(Agents));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed 1!");
 		return cudaStatus;
-    }
+	}
 
-    cudaStatus = cudaMalloc((void**)&d_players, sizeof(Players));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed! 2");
+	cudaStatus = cudaMalloc((void**)&d_players, sizeof(Players));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed! 2");
 		return cudaStatus;
-    }
+	}
 
-    // Copy input vectors from host memory to GPU buffers.
-    cudaStatus = cudaMemcpy(d_agents, agents, sizeof(Agents), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed! 3");
+	// Copy input vectors from host memory to GPU buffers.
+	cudaStatus = cudaMemcpy(d_agents, agents, sizeof(Agents), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed! 3");
 		return cudaStatus;
-    }
+	}
 
-    cudaStatus = cudaMemcpy(d_players, players, sizeof(Players), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed! 4");
+	cudaStatus = cudaMemcpy(d_players, players, sizeof(Players), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed! 4");
 		return cudaStatus;
-    }
+	}
 
 	return cudaStatus;
 }
@@ -436,8 +478,8 @@ cudaError_t runKernal(Players* players, Agents* agents, unsigned int size, float
 {
 	cudaError_t cudaStatus;
 	int blockSize;      // The launch configurator returned block size 
-    int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
-    int gridSize;       // The actual grid size needed, based on input size
+	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
+	int gridSize;       // The actual grid size needed, based on input size
 
 	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSM, 0, size);
 
@@ -449,20 +491,20 @@ cudaError_t runKernal(Players* players, Agents* agents, unsigned int size, float
 	// Launch a kernel on the GPU with one thread for each element.
 	//cudaFSM<<<gridSize, blockSize>>>(d_players, d_agents, msec, size);
 
-    // Check for any errors launching the kernel
-    cudaStatus = cudaGetLastError();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+	// Check for any errors launching the kernel
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
 		return cudaStatus;
-    }
+	}
 
 	// cudaDeviceSynchronize waits for the kernel to finish, and returns
-    // any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+	// any errors encountered during the launch.
+	cudaStatus = cudaDeviceSynchronize();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
 		fprintf(stderr, cudaGetErrorName(cudaStatus));
-    }
+	}
 
 	return cudaStatus;
 }
@@ -471,71 +513,71 @@ cudaError_t clearData(Players* players, Agents* agents, unsigned int size, float
 {
 	cudaError_t cudaStatus;
 
-    // Copy output vector from GPU buffer to host memory.
+	// Copy output vector from GPU buffer to host memory.
 	cudaStatus = cudaMemcpy(players, d_players, sizeof(Players), cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed players!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed players!");
+		goto Error;
+	}
 
 	cudaStatus = cudaMemcpy(agents, d_agents, sizeof(Agents), cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed agents!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed agents!");
+		goto Error;
+	}
 
 
 Error:
-    //cudaFree(dev_c);
-    cudaFree(d_agents);
-    cudaFree(d_players);
-   
+	//cudaFree(dev_c);
+	cudaFree(d_agents);
+	cudaFree(d_players);
 
-    return cudaStatus;
+
+	return cudaStatus;
 }
 
 cudaError_t addWithCuda(Players* players, Agents* agents, const unsigned int size, float msec, Players* d_players, Agents* d_agents)
 {
-    d_players = 0;
+	d_players = 0;
 	d_agents = 0;
-    cudaError_t cudaStatus;
+	cudaError_t cudaStatus;
 	int blockSize;      // The launch configurator returned block size 
-    int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
-    int gridSize;       // The actual grid size needed, based on input size 
+	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
+	int gridSize;       // The actual grid size needed, based on input size 
 
 
-    // Choose which GPU to run on, change this on a multi-GPU system.
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
-        goto Error;
-    }
+	// Choose which GPU to run on, change this on a multi-GPU system.
+	cudaStatus = cudaSetDevice(0);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
+		goto Error;
+	}
 
-    // Allocate GPU buffers for three vectors (two input, one output)    .
-    cudaStatus = cudaMalloc((void**)&d_agents, sizeof(Agents));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
+	// Allocate GPU buffers for three vectors (two input, one output)    .
+	cudaStatus = cudaMalloc((void**)&d_agents, sizeof(Agents));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
 
-    cudaStatus = cudaMalloc((void**)&d_players, sizeof(Players));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
+	cudaStatus = cudaMalloc((void**)&d_players, sizeof(Players));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
 
-    // Copy input vectors from host memory to GPU buffers.
-    cudaStatus = cudaMemcpy(d_agents, agents, sizeof(Agents), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
+	// Copy input vectors from host memory to GPU buffers.
+	cudaStatus = cudaMemcpy(d_agents, agents, sizeof(Agents), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
 
-    cudaStatus = cudaMemcpy(d_players, players, sizeof(Players), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
+	cudaStatus = cudaMemcpy(d_players, players, sizeof(Players), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
 
 	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSM, 0, size);
 
@@ -547,42 +589,42 @@ cudaError_t addWithCuda(Players* players, Agents* agents, const unsigned int siz
 	// Launch a kernel on the GPU with one thread for each element.
 	//cudaFSM<<<gridSize, blockSize>>>(d_players, d_agents, d_agents msec, size);
 
-    // Check for any errors launching the kernel
-    cudaStatus = cudaGetLastError();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-        goto Error;
-    }
-    
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns
-    // any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-        goto Error;
-    }
+	// Check for any errors launching the kernel
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+		goto Error;
+	}
 
-    // Copy output vector from GPU buffer to host memory.
+	// cudaDeviceSynchronize waits for the kernel to finish, and returns
+	// any errors encountered during the launch.
+	cudaStatus = cudaDeviceSynchronize();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+		goto Error;
+	}
+
+	// Copy output vector from GPU buffer to host memory.
 	cudaStatus = cudaMemcpy(players, d_players, sizeof(Players), cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed players!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed players!");
+		goto Error;
+	}
 
 	cudaStatus = cudaMemcpy(agents, d_agents, sizeof(Agents), cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed agents!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed agents!");
+		goto Error;
+	}
 
 
 Error:
-    //cudaFree(dev_c);
-    cudaFree(d_agents);
-    cudaFree(d_players);
-   
+	//cudaFree(dev_c);
+	cudaFree(d_agents);
+	cudaFree(d_players);
 
-    return cudaStatus;
+
+	return cudaStatus;
 }
 
 cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned int size, float msec, AIWorldPartition* partitions, const int partitionCount, Vector3* halfDim)
@@ -590,104 +632,104 @@ cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned in
 	//COPY DATA TO THE GPU
 	//////////////////////
 
-    Players* d_players = 0;
+	Players* d_players = 0;
 	Agents* d_agents = 0;
 	AIWorldPartition* d_partitions = 0;
 	Vector3* d_halfDim = 0;
 	short* d_agentPartitions = 0;
 	short* d_partitionPlayers = 0;
-    cudaError_t cudaStatus;
+	cudaError_t cudaStatus;
 	int blockSize;      // The launch configurator returned block size 
-    int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
-    int gridSize;       // The actual grid size needed, based on input size 
+	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
+	int gridSize;       // The actual grid size needed, based on input size 
 
 
-    // Choose which GPU to run on, change this on a multi-GPU system.
-    cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
-        goto Error;
-    }
+	// Choose which GPU to run on, change this on a multi-GPU system.
+	cudaStatus = cudaSetDevice(0);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
+		goto Error;
+	}
 
-    // Allocate GPU buffers for the data
+	// Allocate GPU buffers for the data
 	// Agents
-    cudaStatus = cudaMalloc((void**)&d_agents, sizeof(Agents));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
+	cudaStatus = cudaMalloc((void**)&d_agents, sizeof(Agents));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
 
 	// Players
-    cudaStatus = cudaMalloc((void**)&d_players, sizeof(Players));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
+	cudaStatus = cudaMalloc((void**)&d_players, sizeof(Players));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
 
 	// World Partitions
 	cudaStatus = cudaMalloc((void**)&d_partitions, sizeof(AIWorldPartition));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
 
 	// Half Dimensions
 	cudaStatus = cudaMalloc((void**)&d_halfDim, sizeof(Vector3));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
 
 	// copy pointers from structs (urgh)
 	cudaStatus = cudaMalloc((void**)&d_agentPartitions, (agents->MAXAGENTS*8) * sizeof(short));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
 
 	cudaStatus = cudaMalloc((void**)&d_partitionPlayers, (partitions->MAXPARTITIONS*players->MAXPLAYERS) * sizeof(short));
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMalloc failed!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
 
 
-    // Copy input vectors from host memory to GPU buffers.
-    cudaStatus = cudaMemcpy(d_agents, agents, sizeof(Agents), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
+	// Copy input vectors from host memory to GPU buffers.
+	cudaStatus = cudaMemcpy(d_agents, agents, sizeof(Agents), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
 
-    cudaStatus = cudaMemcpy(d_players, players, sizeof(Players), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
+	cudaStatus = cudaMemcpy(d_players, players, sizeof(Players), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
 
 	cudaStatus = cudaMemcpy(d_partitions, partitions, sizeof(AIWorldPartition), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
 
 	cudaStatus = cudaMemcpy(d_halfDim, halfDim, sizeof(Vector3), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
 
 	cudaStatus = cudaMemcpy(d_agentPartitions, agents->partitions, (agents->MAXAGENTS*8) * sizeof(short), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
 
 	cudaStatus = cudaMemcpy(d_partitionPlayers, partitions->myPlayers, (partitions->MAXPARTITIONS*players->MAXPLAYERS) * sizeof(short), cudaMemcpyHostToDevice);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
 
 	//RUN THE KERNALS ON THE GPU
 	////////////////////////////
@@ -703,10 +745,10 @@ cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned in
 
 	cudaStatus = cudaDeviceSynchronize();
 	cudaStatus = cudaThreadSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+	fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+	goto Error;
+	}
 
 	///////////////////////////
 
@@ -721,10 +763,10 @@ cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned in
 
 	cudaStatus = cudaDeviceSynchronize();
 	cudaStatus = cudaThreadSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-        goto Error;
-    }*/
+	if (cudaStatus != cudaSuccess) {
+	fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+	goto Error;
+	}*/
 
 	//////////////////////////
 
@@ -735,48 +777,48 @@ cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned in
 	gridSize = (size + blockSize - 1) / blockSize;
 
 	// Launch a kernel on the GPU with one thread for each element.
-	//cudaFSM<<<gridSize, blockSize>>>(d_players, d_agents, d_agentPartitions, d_partitionPlayers, msec, size);
+	cudaFSM<<<gridSize, blockSize>>>(d_players, d_agents, d_agentPartitions, d_partitionPlayers, msec, size);
 
-    // Check for any errors launching the kernel
-    cudaStatus = cudaGetLastError();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-        goto Error;
-    }
-    
-    // cudaDeviceSynchronize waits for the kernel to finish, and returns
-    // any errors encountered during the launch.
-    cudaStatus = cudaDeviceSynchronize();
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-        goto Error;
-    }
+	// Check for any errors launching the kernel
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+		goto Error;
+	}
+
+	// cudaDeviceSynchronize waits for the kernel to finish, and returns
+	// any errors encountered during the launch.
+	cudaStatus = cudaDeviceSynchronize();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+		goto Error;
+	}
 
 
 	//COPY THE DATA BACK OFF OF THE GPU
 	///////////////////////////////////
 
-    // Copy output vector from GPU buffer to host memory.
+	// Copy output vector from GPU buffer to host memory.
 	cudaStatus = cudaMemcpy(players, d_players, sizeof(Players), cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed players!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed players!");
+		goto Error;
+	}
 
 	cudaStatus = cudaMemcpy(agents, d_agents, sizeof(Agents), cudaMemcpyDeviceToHost);
-    if (cudaStatus != cudaSuccess) {
-        fprintf(stderr, "cudaMemcpy failed agents!");
-        goto Error;
-    }
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed agents!");
+		goto Error;
+	}
 
 
 Error:
-    cudaFree(d_agents);
-    cudaFree(d_players);
+	cudaFree(d_agents);
+	cudaFree(d_players);
 	cudaFree(d_partitions);
 	cudaFree(d_halfDim);
 	cudaFree(d_agentPartitions);
 	cudaFree(d_partitionPlayers);
 
-    return cudaStatus;
+	return cudaStatus;
 }
