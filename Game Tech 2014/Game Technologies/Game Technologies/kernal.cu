@@ -30,7 +30,7 @@ __device__ bool CheckBounding(float3 nPos, float aggroRange, float3 pos, float3 
 	return false;
 }
 
-__device__ void cudaPatrol(Players* players, Agents* agents, float msec, const unsigned int size)
+__device__ void cudaPatrol(Players* players, Agents* agents, short* agentsPartitions, short* partitionsPlayers, float msec, const unsigned int size)
 {
 	int a = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -101,9 +101,9 @@ __device__ void cudaPatrol(Players* players, Agents* agents, float msec, const u
 	}*/
 }
 
-__device__ void cudaStareAtPlayer(Players* players, Agents* agents, float msec, const unsigned int size)
+__device__ void cudaStareAtPlayer(Players* players, Agents* agents, short* agentsPartitions, short* partitionsPlayers, float msec, const unsigned int size)
 {
-	int a = blockIdx.x * blockDim.x + threadIdx.x;
+	/*int a = blockIdx.x * blockDim.x + threadIdx.x;
 
 	int p = agents->targetPlayer[a]; // target player
 
@@ -162,7 +162,7 @@ __device__ void cudaStareAtPlayer(Players* players, Agents* agents, float msec, 
 			agents->state[a] = PATROL;
 			agents->targetPlayer[a] = -1;
 		}
-	}
+	}*/
 }
 
 __device__ void cudaChasePlayer(Players* players, Agents* agents, float msec, const unsigned int size)
@@ -368,14 +368,14 @@ __global__ void cudaBroadphaseAgents(Agents* agents, AIWorldPartition* partition
 	}*/
 }
 
-__global__ void cudaFSM(Players* players, Agents* agents, float msec, const unsigned int size)
+__global__ void cudaFSM(Players* players, Agents* agents, short* agentsPartitions, short* partitionsPlayers, float msec, const unsigned int size)
 {
 	int a = blockIdx.x * blockDim.x + threadIdx.x;
 
 	switch (agents->state[a]) {
-	case PATROL: cudaPatrol(players, agents, msec, size);
+	case PATROL: cudaPatrol(players, agents, agentsPartitions, partitionsPlayers, msec, size);
 		break;
-	case STARE_AT_PLAYER: cudaStareAtPlayer(players, agents, msec, size);
+	case STARE_AT_PLAYER: cudaStareAtPlayer(players, agents, agentsPartitions, partitionsPlayers, msec, size);
 		break;
 	case CHASE_PLAYER: cudaChasePlayer(players, agents, msec, size);
 		break;
@@ -447,7 +447,7 @@ cudaError_t runKernal(Players* players, Agents* agents, unsigned int size, float
 	//cudaOccupancyMaxActiveBlocksPerMultiprocessor(&minGridSize, cudaPatrol, blockSize, 0);
 
 	// Launch a kernel on the GPU with one thread for each element.
-	cudaFSM<<<gridSize, blockSize>>>(d_players, d_agents, msec, size);
+	//cudaFSM<<<gridSize, blockSize>>>(d_players, d_agents, msec, size);
 
     // Check for any errors launching the kernel
     cudaStatus = cudaGetLastError();
@@ -545,7 +545,7 @@ cudaError_t addWithCuda(Players* players, Agents* agents, const unsigned int siz
 	//cudaOccupancyMaxActiveBlocksPerMultiprocessor(&minGridSize, cudaPatrol, blockSize, 0);
 
 	// Launch a kernel on the GPU with one thread for each element.
-	cudaFSM<<<gridSize, blockSize>>>(d_players, d_agents, msec, size);
+	//cudaFSM<<<gridSize, blockSize>>>(d_players, d_agents, d_agents msec, size);
 
     // Check for any errors launching the kernel
     cudaStatus = cudaGetLastError();
@@ -594,6 +594,8 @@ cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned in
 	Agents* d_agents = 0;
 	AIWorldPartition* d_partitions = 0;
 	Vector3* d_halfDim = 0;
+	short* d_agentPartitions = 0;
+	short* d_partitionPlayers = 0;
     cudaError_t cudaStatus;
 	int blockSize;      // The launch configurator returned block size 
     int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
@@ -623,7 +625,7 @@ cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned in
     }
 
 	// World Partitions
-	cudaStatus = cudaMalloc((void**)&d_partitions, partitionCount * sizeof(AIWorldPartition));
+	cudaStatus = cudaMalloc((void**)&d_partitions, sizeof(AIWorldPartition));
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMalloc failed!");
         goto Error;
@@ -635,6 +637,20 @@ cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned in
         fprintf(stderr, "cudaMalloc failed!");
         goto Error;
     }
+
+	// copy pointers from structs (urgh)
+	cudaStatus = cudaMalloc((void**)&d_agentPartitions, (agents->MAXAGENTS*8) * sizeof(short));
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMalloc failed!");
+        goto Error;
+    }
+
+	cudaStatus = cudaMalloc((void**)&d_partitionPlayers, (partitions->MAXPARTITIONS*players->MAXPLAYERS) * sizeof(short));
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMalloc failed!");
+        goto Error;
+    }
+
 
     // Copy input vectors from host memory to GPU buffers.
     cudaStatus = cudaMemcpy(d_agents, agents, sizeof(Agents), cudaMemcpyHostToDevice);
@@ -656,6 +672,18 @@ cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned in
     }
 
 	cudaStatus = cudaMemcpy(d_halfDim, halfDim, sizeof(Vector3), cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMemcpy failed!");
+        goto Error;
+    }
+
+	cudaStatus = cudaMemcpy(d_agentPartitions, agents->partitions, (agents->MAXAGENTS*8) * sizeof(short), cudaMemcpyHostToDevice);
+    if (cudaStatus != cudaSuccess) {
+        fprintf(stderr, "cudaMemcpy failed!");
+        goto Error;
+    }
+
+	cudaStatus = cudaMemcpy(d_partitionPlayers, partitions->myPlayers, (partitions->MAXPARTITIONS*players->MAXPLAYERS) * sizeof(short), cudaMemcpyHostToDevice);
     if (cudaStatus != cudaSuccess) {
         fprintf(stderr, "cudaMemcpy failed!");
         goto Error;
@@ -707,7 +735,7 @@ cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned in
 	gridSize = (size + blockSize - 1) / blockSize;
 
 	// Launch a kernel on the GPU with one thread for each element.
-	cudaFSM<<<gridSize, blockSize>>>(d_players, d_agents, msec, size);
+	//cudaFSM<<<gridSize, blockSize>>>(d_players, d_agents, d_agentPartitions, d_partitionPlayers, msec, size);
 
     // Check for any errors launching the kernel
     cudaStatus = cudaGetLastError();
@@ -743,10 +771,12 @@ cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned in
 
 
 Error:
-    //cudaFree(dev_c);
     cudaFree(d_agents);
     cudaFree(d_players);
-   
+	cudaFree(d_partitions);
+	cudaFree(d_halfDim);
+	cudaFree(d_agentPartitions);
+	cudaFree(d_partitionPlayers);
 
     return cudaStatus;
 }

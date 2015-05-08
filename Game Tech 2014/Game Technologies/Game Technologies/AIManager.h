@@ -44,7 +44,6 @@ struct AIWorldPartition {
 
 struct Agents {
 	static const int MAXAGENTS = 1024 * 40 + 1;
-	static const int MAXPLAYERS = 5000;
 	static const int AGGRORANGE = 1000;
 	static const int MAXABILITIES = 3;
 
@@ -58,8 +57,6 @@ struct Agents {
 	float x[MAXAGENTS];
 	float y[MAXAGENTS];
 	float z[MAXAGENTS];
-
-	int players[MAXAGENTS][MAXPLAYERS/2];
 
 	short* partitions;
 
