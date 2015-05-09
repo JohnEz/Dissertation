@@ -91,6 +91,8 @@ int main() {
 	running = false;
 	physics.join();
 
+	AIManager::GetInstance()->dismantleCuda();
+
 	return Quit();
 }
 

@@ -9,11 +9,18 @@
 #ifndef CUDAFSM
 #define CUDAFSM
 
-
-
 //copies the data to the gpu memory
+cudaError_t cudaCopyCore(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec);
 
+//Runs the FSM Kernal
+cudaError_t cudaRunKernal(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec);
 
-cudaError_t cudaUpdateAgents(Players* players, Agents* agents, const unsigned int size, float msec, AIWorldPartition* partitions, const int partitionCount, Vector3* halfDim);
+//Gets the data from the GPU
+cudaError_t copyDataFromGPU(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec);
+
+//Clears the core data (dont forget to do this at the end!)
+void clearCoreData();
+
+cudaError_t cudaUpdateAgents(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec);
 
 #endif

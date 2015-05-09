@@ -27,8 +27,6 @@ struct Players {
 	int level[MAXPLAYERS];
 	int hp[MAXPLAYERS];
 	int maxHP[MAXPLAYERS];
-
-	bool isDead[MAXPLAYERS]; //
 	
 	float x[MAXPLAYERS];
 	float y[MAXPLAYERS];
@@ -38,9 +36,8 @@ struct Players {
 
 struct AIWorldPartition {
 	static const int MAXPARTITIONS = 100;
+	Vector3 halfDim;
 	Vector3 pos[MAXPARTITIONS];
-	short* myPlayers;					//
-	int playerCount[MAXPARTITIONS];		//
 };
 
 struct Agents {
@@ -59,8 +56,6 @@ struct Agents {
 	float y[MAXAGENTS];
 	float z[MAXAGENTS];
 
-	short* partitions;		//
-
 };
 
 struct CopyOnce
@@ -73,25 +68,37 @@ struct CopyOnce
 struct CopyEachFrame
 {
 	//players
-	//bool isDead[MAXPLAYERS];
+	bool playerIsDead[Players::MAXPLAYERS];
+
+	//agents
+	short* agentPartitions;
+
+	//partitions
+	short* partitionPlayers;
+	int playerCount[AIWorldPartition::MAXPARTITIONS];	
 };
 
 class AIManager {
 public:
 	//AIManager(){};
 	//AIManager(int xNum, int yNum, int zNum, float height, float width, float depth);
-	//~AIManager(){};
+	~AIManager();
 
 	static AIManager* GetInstance();
 
 	void init(int xNum, int yNum, int zNum, float height, float width, float depth);
 
 	void update(float msec);
-	bool CheckBounding(PhysicsNode& n, float aggroRange,Vector3 pos, Vector3 halfDim);
+	bool CheckBounding(const Vector3& n, float aggroRange,Vector3 pos, Vector3 halfDim);
 	void Broadphase(float msec);
 	void addAgent(PhysicsNode* a);
 	void addPlayer(PhysicsNode* p);
 
+	void setupCuda();
+	void dismantleCuda();
+
+	CopyOnce* d_coreData;
+	CopyEachFrame* d_updateData;
 	
 
 protected:
@@ -99,11 +106,9 @@ protected:
 	static AIManager* aiInst;
 
 	vector<AIWorldPartition> allPartitions;
-	Vector3 halfDim;
 
-	Agents myAgents;
-	Players myPlayers;
-	AIWorldPartition myPartitions;
+	CopyOnce coreData;
+	CopyEachFrame updateData;
 
 	int agentCount;
 	int playerCount;
@@ -116,7 +121,9 @@ protected:
 
 	Ability agentAbilities[5];
 
+	unsigned int broadphaseCounter;
 
+	float timeSinceBroad;
 };
 
 #endif

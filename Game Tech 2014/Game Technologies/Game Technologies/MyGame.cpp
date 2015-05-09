@@ -33,7 +33,7 @@ MyGame::MyGame()	{
 
 	Renderer::GetRenderer().SetCamera(gameCamera);
 
-	AIManager::GetInstance()->init(5,2,5, 3000, 34000, 34000);
+	AIManager::GetInstance()->init(7,2,7, 3000, 34000, 34000);
 
 	//myAI = AIManager(2,2,2, 14000, 14000, 14000);
 	
@@ -89,6 +89,8 @@ MyGame::MyGame()	{
 	//allPlayers[2] = BuildPlayer(Vector3(3000, 50, 300));
 
 	playerCount = 3;
+
+	AIManager::GetInstance()->setupCuda();
 }
 
 MyGame::~MyGame(void)	{
