@@ -33,7 +33,7 @@ MyGame::MyGame()	{
 
 	Renderer::GetRenderer().SetCamera(gameCamera);
 
-	AIManager::GetInstance()->init(2,1,1, 2000, 34000, 34000);
+	AIManager::GetInstance()->init(5,2,5, 3000, 34000, 34000);
 
 	//myAI = AIManager(2,2,2, 14000, 14000, 14000);
 	
@@ -54,7 +54,7 @@ MyGame::MyGame()	{
 
 	//allEntities.push_back(BuildFloatSphereEntity(100.0f, Vector3(200, 300, 156)));
 
-	for (int i = 0; i < 1024 * 40; ++i)
+	for (int i = 0; i < 1024 * 80; ++i)
 	{
 		int x, y, z;
 

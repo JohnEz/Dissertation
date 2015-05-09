@@ -27,7 +27,8 @@ struct Players {
 	int level[MAXPLAYERS];
 	int hp[MAXPLAYERS];
 	int maxHP[MAXPLAYERS];
-	bool isDead[MAXPLAYERS];
+
+	bool isDead[MAXPLAYERS]; //
 	
 	float x[MAXPLAYERS];
 	float y[MAXPLAYERS];
@@ -38,12 +39,12 @@ struct Players {
 struct AIWorldPartition {
 	static const int MAXPARTITIONS = 100;
 	Vector3 pos[MAXPARTITIONS];
-	short* myPlayers;
-	int playerCount[MAXPARTITIONS];
+	short* myPlayers;					//
+	int playerCount[MAXPARTITIONS];		//
 };
 
 struct Agents {
-	static const int MAXAGENTS = 1024 * 40 + 1;
+	static const int MAXAGENTS = 1024 * 80 + 1;
 	static const int AGGRORANGE = 1000;
 	static const int MAXABILITIES = 3;
 
@@ -58,11 +59,22 @@ struct Agents {
 	float y[MAXAGENTS];
 	float z[MAXAGENTS];
 
-	short* partitions;
+	short* partitions;		//
 
 };
 
+struct CopyOnce
+{
+	Players myPlayers;
+	Agents myAgents;
+	AIWorldPartition myPartitions;
+};
 
+struct CopyEachFrame
+{
+	//players
+	//bool isDead[MAXPLAYERS];
+};
 
 class AIManager {
 public:

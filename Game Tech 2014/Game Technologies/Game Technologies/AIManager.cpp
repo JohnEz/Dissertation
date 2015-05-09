@@ -520,12 +520,8 @@ void AIManager::Broadphase(float msec)
 
 void AIManager::update(float msec)
 {
-	Broadphase(msec);
-
 	Players* d_players;
 	Agents* d_agents;
-
-	cudaUpdateAgents(&myPlayers, &myAgents, agentCount, msec, &myPartitions, partitionCount, &halfDim);
 
 	//addDataToGPU(&myPlayers, &myAgents, agentCount, msec, d_players, d_agents);
 	//runKernal(&myPlayers, &myAgents, agentCount, msec, d_players, d_agents);
@@ -573,7 +569,9 @@ void AIManager::update(float msec)
 
 	}
 
-	//Broadphase(msec);
+	Broadphase(msec);
+
+	cudaUpdateAgents(&myPlayers, &myAgents, agentCount, msec, &myPartitions, partitionCount, &halfDim);
 
 
 	if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))
