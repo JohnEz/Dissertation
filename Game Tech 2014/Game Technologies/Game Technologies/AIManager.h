@@ -41,7 +41,7 @@ struct AIWorldPartition {
 };
 
 struct Agents {
-	static const int MAXAGENTS = 1024 * 80 + 1;
+	static const int MAXAGENTS = 1024 * 160;
 	static const int AGGRORANGE = 1000;
 	static const int MAXABILITIES = 3;
 
@@ -74,8 +74,8 @@ struct CopyEachFrame
 	short* agentPartitions;
 
 	//partitions
-	short* partitionPlayers;
-	int playerCount[AIWorldPartition::MAXPARTITIONS];	
+	short* partitionPlayers; //players in the partition
+	int playerCount[AIWorldPartition::MAXPARTITIONS];	 //number of players in the partition
 };
 
 class AIManager {

@@ -264,6 +264,17 @@ __device__ void cudaLeashBack(CopyOnce* coreData, CopyEachFrame* updateData, flo
 	}
 }
 
+__device__ void cudaReduceCooldowns(CopyOnce* coreData, float msec)
+{
+	int a = blockIdx.x * blockDim.x + threadIdx.x;
+
+	for (int i = 0 ; i < coreData->myAgents.MAXABILITIES; ++i)
+	{
+		int check = coreData->myAgents.myAbilities[a][i].cooldown > 0;
+		coreData->myAgents.myAbilities[a][i].cooldown -= msec * check;
+	}
+}
+
 __device__ void cudaUseAbility(CopyOnce* coreData, CopyEachFrame* updateData, float msec)
 {
 	int a = blockIdx.x * blockDim.x + threadIdx.x;
@@ -309,70 +320,87 @@ __device__ void cudaUseAbility(CopyOnce* coreData, CopyEachFrame* updateData, fl
 	}
 }
 
-__global__ void cudaBroadphasePlayers(CopyOnce* coreData, CopyEachFrame* updateData, const int partitionCount)
+__global__ void cudaBroadphasePlayers(CopyOnce* coreData, CopyEachFrame* updateData, short* partitionsPlayers)
 {
 	int pa = blockIdx.x * blockDim.x + threadIdx.x;
 
-	//Vector3 to float3 convertions
-	/*float3 hDim = float3();
-	hDim.x = halfDim->x;
-	hDim.y = halfDim->y;
-	hDim.z = halfDim->z;
+	//position of this partition
+	float3 pos = float3();
+	pos.x = coreData->myPartitions.pos[pa].x;
+	pos.y = coreData->myPartitions.pos[pa].y;
+	pos.z = coreData->myPartitions.pos[pa].z;
 
-	float3 pPos = float3();
-	pPos.x = partitions[pa].pos.x;
-	pPos.y = partitions[pa].pos.y;
-	pPos.z = partitions[pa].pos.z;
-
-	for (int i = 0; i < coreData->myPlayers.MAXPLAYERS; ++i)
+	if (pos.x != 0 && pos.y != 0 && pos.z != 0)
 	{
-	//get player pos in float3
-	float3 nPos = float3();
-	nPos.x = coreData->myPlayers.x[i];
-	nPos.y = coreData->myPlayers.y[i];
-	nPos.z = coreData->myPlayers.z[i];
+		updateData->playerCount[pa] = 0;
 
-	if (CheckBounding(nPos, 0, pPos, hDim))
-	{
-	partitions[pa].myPlayers[partitions[pa].playerCount] = i;
-	++partitions[pa].playerCount;
-	}
+		// half dimensions of the partitions
+		float3 halfDim = float3();
+		halfDim.x = coreData->myPartitions.halfDim.x;
+		halfDim.y = coreData->myPartitions.halfDim.y;
+		halfDim.z = coreData->myPartitions.halfDim.z;
+
+		//loop through the players
+		for (int j = 0; j < coreData->myPlayers.MAXPLAYERS; ++j) {
+			//check the player exists
+			if(!updateData->playerIsDead[j] && coreData->myPlayers.maxHP[j] > 0)
+			{
+
+				//players position
+				float3 playerPos = float3();
+				playerPos.x = coreData->myPlayers.x[j];
+				playerPos.y = coreData->myPlayers.y[j];
+				playerPos.z = coreData->myPlayers.z[j];
+
+				//check if its in the partition
+				if (CheckBounding(playerPos, 0, pos, halfDim))
+				{
+					//add to the partitions players
+					partitionsPlayers[(pa*coreData->myPlayers.MAXPLAYERS) + updateData->playerCount[pa]] = j;
+					++updateData->playerCount[pa];
+				}
+			}
+		}
 	}
 
 }
 
-__global__ void cudaBroadphaseAgents(CopyOnce* coreData, CopyEachFrame* updateData, const int partitionCount)
+__global__ void cudaBroadphaseAgents(CopyOnce* coreData, CopyEachFrame* updateData,short* agentsPartitions, const int partitionCount)
 {
 	int a = blockIdx.x * blockDim.x + threadIdx.x;
 
-	//Vector3 to float3 convertions
-	/*float3 hDim = float3();
-	hDim.x = halfDim->x;
-	hDim.y = halfDim->y;
-	hDim.z = halfDim->z;
+	float3 agentPos = float3();
+	agentPos.x = coreData->myAgents.x[a];
+	agentPos.y = coreData->myAgents.y[a];
+	agentPos.z = coreData->myAgents.z[a];
 
-	float3 nPos = float3();
-	nPos.x = coreData->myAgents.x[a];
-	nPos.y = coreData->myAgents.y[a];
-	nPos.z = coreData->myAgents.z[a];
+	// half dimensions of the partitions
+	float3 halfDim = float3();
+	halfDim.x = coreData->myPartitions.halfDim.x;
+	halfDim.y = coreData->myPartitions.halfDim.y;
+	halfDim.z = coreData->myPartitions.halfDim.z;
 
-	//loop through the partitions
-	for (int i = 0; i < partitionCount; ++i)
-	{
-	float3 pPos = float3();
-	pPos.x = partitions[i].pos.x;
-	pPos.y = partitions[i].pos.y;
-	pPos.z = partitions[i].pos.z;
+	int p = 0;
 
-	//if the agent is in the partition
-	if (CheckBounding(nPos, coreData->myAgents.AGGRORANGE, pPos, hDim)) {
-	//loop through all the players and copy them to the agent
-	for (int j = 0; j < partitions[i].playerCount; ++j)
-	{
-	agents->players[a][j] = partitions[i].myPlayers[j];
-	}
-	}
-	}*/
+	//loop through the world partitions
+	for (int j = 0; j < partitionCount; ++j) {
+		
+			//position of this partition
+			float3 pos = float3();
+			pos.x = coreData->myPartitions.pos[j].x;
+			pos.y = coreData->myPartitions.pos[j].y;
+			pos.z = coreData->myPartitions.pos[j].z;
+
+			//check if the agent is in this partition
+			if (pos.x != 0 && pos.y != 0 && pos.z != 0){
+
+				if (CheckBounding(agentPos, coreData->myAgents.AGGRORANGE, pos, halfDim))
+				{
+					agentsPartitions[(a*8) + p] = j;
+					++p;
+				}
+			}
+		}
 }
 
 __global__ void cudaFSM(CopyOnce* coreData, CopyEachFrame* updateData, short* agentsPartitions, short* partitionsPlayers, float msec)
@@ -391,6 +419,8 @@ __global__ void cudaFSM(CopyOnce* coreData, CopyEachFrame* updateData, short* ag
 	case USE_ABILITY: cudaUseAbility(coreData, updateData, msec);
 		break;
 	};
+
+	cudaReduceCooldowns(coreData, msec);
 
 }
 
@@ -561,11 +591,9 @@ Error:
 	return cudaStatus;
 }
 
-cudaError_t cudaCopyCore(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec)
+cudaError_t cudaCopyCore(CopyOnce* coreData)
 {
 	cudaError_t cudaStatus;
-
-	//AIManager::GetInstance()->d_coreData = 0;
 
 	//COPY DATA TO THE GPU
 	//////////////////////
@@ -597,7 +625,7 @@ cudaError_t cudaCopyCore(CopyOnce* coreData, CopyEachFrame* updateData, const un
 	return cudaStatus;
 }
 
-cudaError_t cudaRunKernal(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec)
+cudaError_t cudaRunKernal(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad)
 {
 	AIManager::GetInstance()->d_updateData = 0;
 	short* d_agentPartitions = 0;
@@ -631,7 +659,7 @@ cudaError_t cudaRunKernal(CopyOnce* coreData, CopyEachFrame* updateData, const u
 		return cudaStatus;
 	}
 
-	
+
 	//Pass pointers their data
 	//Update Data
 	cudaStatus = cudaMemcpy(AIManager::GetInstance()->d_updateData, updateData, sizeof(CopyEachFrame), cudaMemcpyHostToDevice);
@@ -657,6 +685,64 @@ cudaError_t cudaRunKernal(CopyOnce* coreData, CopyEachFrame* updateData, const u
 	//RUN THE KERNALS ON THE GPU
 	////////////////////////////
 
+	//run the broadphase on the gpu
+	if (runBroad)
+	{
+		//BROADPHASE FOR PLAYERS
+		////////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphasePlayers, 0, partitionCount);
+
+		// Round up according to array size 
+		gridSize = (partitionCount + blockSize - 1) / blockSize;
+
+		cudaBroadphasePlayers<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_partitionPlayers);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "1st cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		//BROADPHASE FOR AGENTS
+		///////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount);
+
+		// Round up according to array size 
+		gridSize = (agentCount + blockSize - 1) / blockSize;
+
+		cudaBroadphaseAgents<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, partitionCount);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "2nd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+	}
+
 	//get the mingrid and blocksize
 	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSM, 0, agentCount);
 
@@ -677,7 +763,7 @@ cudaError_t cudaRunKernal(CopyOnce* coreData, CopyEachFrame* updateData, const u
 	// any errors encountered during the launch.
 	cudaStatus = cudaDeviceSynchronize();
 	if (cudaStatus != cudaSuccess) {
-		//fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+		fprintf(stderr, "3rd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
 		fprintf(stderr, cudaGetErrorString(cudaStatus));
 		return cudaStatus;
 	}

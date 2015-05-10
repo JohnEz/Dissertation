@@ -380,6 +380,7 @@ void AIManager::init(int xNum, int yNum, int zNum, float height, float width, fl
 
 	coreData.myPartitions = createWorldPartitions(xNum, yNum, zNum, height, width, depth, halfDim);
 
+	partitionCount = xNum * yNum * zNum;
 	agentCount = 0;
 	playerCount = 0;
 
@@ -449,11 +450,11 @@ void AIManager::Broadphase(float msec)
 	for (int i = 0; i < agentCount; ++i) {
 		p = 0;
 
+		Vector3 agentPos = Vector3(coreData.myAgents.x[i], coreData.myAgents.y[i], coreData.myAgents.z[i]);
+
 		for (int j = 0; j < AIWorldPartition::MAXPARTITIONS; ++j) {
 			//check if the agent is in this partition
 			if(coreData.myPartitions.pos[j] != Vector3(0,0,0)){
-
-				Vector3 agentPos = Vector3(coreData.myAgents.x[i], coreData.myAgents.y[i], coreData.myAgents.z[i]);
 
 				if (CheckBounding(agentPos, Agents::AGGRORANGE, coreData.myPartitions.pos[j], coreData.myPartitions.halfDim))
 				{
@@ -470,7 +471,7 @@ void AIManager::setupCuda()
 {
 	d_coreData = 0;
 
-	cudaCopyCore(&coreData, &updateData, agentCount, partitionCount, 0);
+	cudaCopyCore(&coreData);
 }
 
 void AIManager::dismantleCuda()
@@ -485,7 +486,7 @@ void AIManager::update(float msec)
 	{
 		//run the state functions
 		//states[coreData.myAgents.state[i]](&i, &coreData, &updateData, msec);
-		reduceCooldowns(&i, &coreData, msec);
+		//reduceCooldowns(&i, &coreData, msec);
 
 		if (agentNodes[i] != NULL)
 		{
@@ -521,17 +522,11 @@ void AIManager::update(float msec)
 
 	}
 
-	if (broadphaseCounter == 0)
-	{
-		Broadphase(msec);
-		broadphaseCounter = 10;
-	}
-
-	--broadphaseCounter;
+	//Broadphase(msec);
 
 	//cudaUpdateAgents(&coreData, &updateData, agentCount, partitionCount, msec);
 
-	cudaRunKernal(&coreData, &updateData, agentCount, partitionCount, msec);
+	cudaRunKernal(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
 
 	/*if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))
@@ -604,9 +599,9 @@ void AIManager::addAgent(PhysicsNode* a)
 
 	agentNodes[agentCount] = a; // store the physic nodes for updating after cuda
 
-	if (agentCount < Agents::MAXAGENTS - 1) // TODO probably should move this to the top
+	if (agentCount < Agents::MAXAGENTS) // TODO probably should move this to the top
 	{
-		agentCount++;
+		++agentCount;
 	}
 	Performance::GetInstance()->setScore(agentCount);
 
@@ -617,9 +612,9 @@ void AIManager::addPlayer(PhysicsNode* p)
 {
 	coreData.myPlayers.level[playerCount] = 100; //(rand() % 100) + 1; // randomly generate level
 
-	coreData.myPlayers.hp[playerCount] = 2000; //set hp
+	coreData.myPlayers.hp[playerCount] = 20000; //set hp
 
-	coreData.myPlayers.maxHP[playerCount] = 2000; //set the max hp
+	coreData.myPlayers.maxHP[playerCount] = 20000; //set the max hp
 
 	updateData.playerIsDead[playerCount] = false; // make the player alive
 
@@ -629,9 +624,9 @@ void AIManager::addPlayer(PhysicsNode* p)
 
 	playerNodes[playerCount] = p;
 
-	if (playerCount < Players::MAXPLAYERS - 1) // TODO probably should move this to the top
+	if (playerCount < Players::MAXPLAYERS) // TODO probably should move this to the top
 	{
-		playerCount++;
+		++playerCount;
 	}
 
 	Performance::GetInstance()->setCollisions(playerCount);
