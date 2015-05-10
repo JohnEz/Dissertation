@@ -526,7 +526,9 @@ void AIManager::update(float msec)
 
 	//cudaUpdateAgents(&coreData, &updateData, agentCount, partitionCount, msec);
 
-	cudaRunKernal(&coreData, &updateData, agentCount, partitionCount, msec, true);
+	//memset(updateData.playerCount, 0, 100 * sizeof(short));
+
+	cudaRunKernalNew(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
 
 	/*if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))
