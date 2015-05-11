@@ -483,6 +483,7 @@ void AIManager::dismantleCuda()
 	clearCoreData();
 }
 
+
 void AIManager::update(float msec)
 {
 
@@ -533,10 +534,9 @@ void AIManager::update(float msec)
 	//cudaUpdateAgents(&coreData, &updateData, agentCount, partitionCount, msec);
 
 	//memset(updateData.playerCount, 0, 100 * sizeof(short));
-
 	cudaRunKernalNew(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
-
+	
 }
 
 bool AIManager::CheckBounding(const Vector3& n, float aggroRange,Vector3 pos, Vector3 halfDim)

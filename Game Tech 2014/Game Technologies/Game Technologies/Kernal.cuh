@@ -3,6 +3,7 @@
 #include <vector_types.h>
 #include <device_launch_parameters.h>
 #include <stdio.h>
+#include <thrust/sort.h>
 
 #include "AIManager.h"
 

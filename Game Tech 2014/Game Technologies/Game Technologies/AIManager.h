@@ -41,7 +41,7 @@ struct AIWorldPartition {
 };
 
 struct Agents {
-	static const int MAXAGENTS = 1024 * 640;
+	static const int MAXAGENTS = 1024 * 40;
 	static const int AGGRORANGE = 200;
 	static const int MAXABILITIES = 3;
 
