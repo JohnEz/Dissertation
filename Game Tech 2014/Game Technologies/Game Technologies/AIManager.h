@@ -38,13 +38,10 @@ struct AIWorldPartition {
 	static const int MAXPARTITIONS = 100;
 	Vector3 halfDim;
 	Vector3 pos[MAXPARTITIONS];
-
-	short* partitionPlayers; //players in the partition
-	int playerCount[AIWorldPartition::MAXPARTITIONS];	 //number of players in the partition
 };
 
 struct Agents {
-	static const int MAXAGENTS = 1024 * 80;
+	static const int MAXAGENTS = 1024 * 640;
 	static const int AGGRORANGE = 200;
 	static const int MAXABILITIES = 3;
 
@@ -60,8 +57,7 @@ struct Agents {
 	float z[MAXAGENTS];
 
 	int partCount[MAXAGENTS];
-
-	short* partitions;
+	float waitedTime[MAXAGENTS];
 };
 
 struct CopyOnce

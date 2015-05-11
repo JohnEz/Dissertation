@@ -168,10 +168,12 @@ void stareAtPlayer(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float 
 	float aggroRange = min(coreData->myAgents.AGGRORANGE, coreData->myAgents.AGGRORANGE * ((float)coreData->myAgents.level[*a] / (float)coreData->myPlayers.level[p]));
 	float pullRange = (aggroRange * 0.75f) * ((float)coreData->myAgents.level[*a] / (float)coreData->myPlayers.level[p]);
 
+	coreData->myAgents.waitedTime[*a] += msec;
 
-	if (dist < pullRange && !updateData->playerIsDead[p]) // if the player is in pull range
+	if ((dist < pullRange || coreData->myAgents.waitedTime[*a] > 8000.0f ) && !updateData->playerIsDead[p]) // if the player is in pull range
 	{
 		coreData->myAgents.state[*a] = CHASE_PLAYER;
+		coreData->myAgents.waitedTime[*a] = 0.0f;
 	}
 	else
 	{
@@ -214,6 +216,7 @@ void stareAtPlayer(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float 
 		// if there are no close players at all
 		if (!playerClose)
 		{
+			coreData->myAgents.waitedTime[*a] = 0.0f;
 			coreData->myAgents.state[*a] = PATROL;
 			coreData->myAgents.targetPlayer[*a] = -1;
 		}
@@ -416,6 +419,7 @@ void AIManager::init(int xNum, int yNum, int zNum, float height, float width, fl
 	updateData.partitionPlayers = new short[AIWorldPartition::MAXPARTITIONS*Players::MAXPLAYERS];
 	memset(updateData.agentPartitions, -1, (Agents::MAXAGENTS*8) * sizeof(short));
 	memset(updateData.partitionPlayers, -1, (AIWorldPartition::MAXPARTITIONS*Players::MAXPLAYERS) * sizeof(short));
+	memset(coreData.myAgents.waitedTime, 0, (Agents::MAXAGENTS) * sizeof(float));
 }
 
 void AIManager::Broadphase(float msec)
@@ -481,6 +485,8 @@ void AIManager::dismantleCuda()
 
 void AIManager::update(float msec)
 {
+
+	//Broadphase(msec);
 	//set the node positions after updates
 	for (int i = 0; i < agentCount; ++i)
 	{
@@ -531,25 +537,6 @@ void AIManager::update(float msec)
 	cudaRunKernalNew(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
 
-	/*if (Window::GetKeyboard()->KeyDown(KEYBOARD_UP))
-	{
-	myPlayers.z[0] -= (1 * msec);
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_RIGHT))
-	{
-	myPlayers.x[0] += (1 * msec);
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_LEFT))
-	{
-	myPlayers.x[0] -= (1 * msec);
-	}
-
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_DOWN))
-	{
-	myPlayers.z[0] += (1 * msec);
-	}*/
 }
 
 bool AIManager::CheckBounding(const Vector3& n, float aggroRange,Vector3 pos, Vector3 halfDim)
