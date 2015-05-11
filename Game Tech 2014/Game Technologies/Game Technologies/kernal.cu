@@ -463,6 +463,45 @@ __global__ void cudaBroadphaseAgents(CopyOnce* coreData, CopyEachFrame* updateDa
 	}
 }
 
+__global__ void cudaBroadphaseAgents2(CopyOnce* coreData, CopyEachFrame* updateData,short* agentsPartitions, const int partitionCount)
+{
+	int t = blockIdx.x * blockDim.x + threadIdx.x;
+
+	int part = t % partitionCount;
+	int a = t / partitionCount;
+
+	float3 agentPos = float3();
+	agentPos.x = coreData->myAgents.x[a];
+	agentPos.y = coreData->myAgents.y[a];
+	agentPos.z = coreData->myAgents.z[a];
+
+	// half dimensions of the partitions
+	float3 halfDim = float3();
+	halfDim.x = coreData->myPartitions.halfDim.x;
+	halfDim.y = coreData->myPartitions.halfDim.y;
+	halfDim.z = coreData->myPartitions.halfDim.z;
+
+	if (part == 0) coreData->myAgents.partCount[a] = 0;
+	__syncthreads();
+
+	//position of this partition
+	float3 pos = float3();
+	pos.x = coreData->myPartitions.pos[part].x;
+	pos.y = coreData->myPartitions.pos[part].y;
+	pos.z = coreData->myPartitions.pos[part].z;
+
+	//check if the agent is in this partition
+	if (pos.x != 0 && pos.y != 0 && pos.z != 0){
+
+		if (CheckBounding(agentPos, coreData->myAgents.AGGRORANGE, pos, halfDim))
+		{
+			int v = (a*8) + atomicAdd(&coreData->myAgents.partCount[a], 1);
+			__syncthreads();
+			agentsPartitions[v] = part;
+		}
+	}
+}
+
 __global__ void cudaFSM(CopyOnce* coreData, CopyEachFrame* updateData, short* agentsPartitions, short* partitionsPlayers, float msec)
 {
 	int a = blockIdx.x * blockDim.x + threadIdx.x;
@@ -953,9 +992,11 @@ cudaError_t cudaRunKernalNew(CopyOnce* coreData, CopyEachFrame* updateData, cons
 		///////////////////////
 
 		//get the mingrid and blocksize
+		//cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount*partitionCount);
 		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount);
 
 		// Round up according to array size 
+		//gridSize = (agentCount*partitionCount + blockSize - 1) / blockSize;
 		gridSize = (agentCount + blockSize - 1) / blockSize;
 
 		cudaBroadphaseAgents<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, partitionCount);

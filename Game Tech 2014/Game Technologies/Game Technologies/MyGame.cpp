@@ -54,7 +54,7 @@ MyGame::MyGame()	{
 
 	//allEntities.push_back(BuildFloatSphereEntity(100.0f, Vector3(200, 300, 156)));
 
-	for (int i = 0; i < 1024 * 640; ++i)
+	for (int i = 0; i < 1024 * 80; ++i)
 	{
 		int x, y, z;
 
