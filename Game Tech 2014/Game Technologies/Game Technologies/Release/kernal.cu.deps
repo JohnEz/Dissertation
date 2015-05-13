@@ -769,6 +769,39 @@ C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/cp
 C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/cuda/detail/partition.h
 C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/cuda/detail/temporary_indirect_permutation.h
 C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/trivial_sequence.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/version.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/device_vector.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/device_malloc_allocator.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/device_ptr.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/memory.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/device_ptr.inl
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/device_reference.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/device_reference.inl
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/device_malloc.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/device_malloc.inl
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/device_free.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/device_free.inl
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/vector_base.h
+C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\vector
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/vector_base.inl
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/overlapped_copy.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/equal.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/equal.inl
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/detail/generic/equal.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/detail/generic/equal.inl
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/mismatch.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/mismatch.inl
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/detail/generic/mismatch.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/detail/generic/mismatch.inl
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/detail/adl/mismatch.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/cpp/detail/mismatch.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/cuda/detail/mismatch.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/detail/adl/equal.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/cpp/detail/equal.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/system/cuda/detail/equal.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/device_vector.inl
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/host_vector.h
+C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include\thrust/detail/host_vector.inl
 d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\AIManager.h
 d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\PhysicsNode.h
 d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\../../nclgl/Quaternion.h
@@ -780,7 +813,6 @@ d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game 
 d:\storage\work\dissertation\dissertation\game tech 2014\nclgl\Mesh.h
 d:\storage\work\dissertation\dissertation\game tech 2014\nclgl\OGLRenderer.h
 C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\fstream
-C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\include\vector
 C:\Program Files (x86)\Windows Kits\8.0\Include\um\GL/glu.h
 C:\Program Files (x86)\Windows Kits\8.0\Include\shared\winapifamily.h
 C:\Program Files (x86)\Windows Kits\8.0\Include\um\GL/gl.h

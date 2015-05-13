@@ -7,6 +7,13 @@ void (*states[MAX_STATES]) (int* a, CopyOnce* coreData, CopyEachFrame* updateDat
 
 AIManager* AIManager::aiInst = 0;
 
+#define	BASICPU
+//#define BASICGPU
+//#define GPU_OLD_BROAD
+//#define GPU_NEW_BROAD
+//#define SPLIT_GPU
+//#define SPLIT_GPU_BROAD
+
 
 AIWorldPartition createWorldPartitions(int xNum, int yNum, int zNum, float height, float width, float depth, const Vector3 halfDim)
 {
@@ -94,33 +101,6 @@ void Patrol(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float msec)
 		coreData->myAgents.x[*a] += moveX * sgn<float>(disX);
 		coreData->myAgents.z[*a] += moveZ * sgn<float>(disZ);
 	}
-
-	//state transition
-
-	/*int i = 0;
-	// loop through all the players
-	while (i < players->MAXPLAYERS && agents->players[*a][i] > -1)
-	{
-
-	//the player
-	int p = agents->players[*a][i];
-	//calculate distance to player
-	Vector3 diff = Vector3(players->x[p] - agents->x[*a], players->y[p] - agents->y[*a],  players->z[p] - agents->z[*a]);
-
-	float dist = sqrtf(Vector3::Dot(diff, diff));
-
-	//if player close transition state to stare at player
-	float aggroRange = min(agents->AGGRORANGE, agents->AGGRORANGE * ((float)agents->level[*a] / (float)players->level[p]));
-
-	if (dist < aggroRange && !players->isDead[p])
-	{
-	agents->state[*a] = STARE_AT_PLAYER; //change state
-	agents->patrolLocation[*a][2] = Vector3(agents->x[*a], agents->y[*a], agents->z[*a]); //set position it left patrol
-	agents->targetPlayer[*a] = p; // playing that is being stared at
-	i = players->MAXPLAYERS; // exit the loop
-	}
-	i++;
-	}*/
 
 	int i = 0;
 	while (i < 8 && updateData->agentPartitions[((*a)*8) + i] != -1)
@@ -420,6 +400,8 @@ void AIManager::init(int xNum, int yNum, int zNum, float height, float width, fl
 	memset(updateData.agentPartitions, -1, (Agents::MAXAGENTS*8) * sizeof(short));
 	memset(updateData.partitionPlayers, -1, (AIWorldPartition::MAXPARTITIONS*Players::MAXPLAYERS) * sizeof(short));
 	memset(coreData.myAgents.waitedTime, 0, (Agents::MAXAGENTS) * sizeof(float));
+	memset(coreData.myAgents.stateCount, 0, MAX_STATES * sizeof(int));
+	coreData.myAgents.stateCount[0] = Agents::MAXAGENTS;
 }
 
 void AIManager::Broadphase(float msec)
@@ -486,17 +468,39 @@ void AIManager::dismantleCuda()
 
 void AIManager::update(float msec)
 {
+#if defined (BASICGPU) || defined (BASICGPU) || defined (SPLITGPU)
+	Broadphase(msec);
+#endif
 
-	//Broadphase(msec);
+	
 	//set the node positions after updates
 	for (int i = 0; i < agentCount; ++i)
 	{
 		//run the state functions
-		//states[coreData.myAgents.state[i]](&i, &coreData, &updateData, msec);
-		//reduceCooldowns(&i, &coreData, msec);
+		#if defined (BASICGPU)
+			states[coreData.myAgents.state[i]](&i, &coreData, &updateData, msec);
+			reduceCooldowns(&i, &coreData, msec);
+		#endif
 
 		if (agentNodes[i] != NULL)
 		{
+			Vector4 colour;
+
+			switch (coreData.myAgents.state[i])
+			{
+			case 0: colour = Vector4(0,0,1,1);
+				break;
+			case 1:colour = Vector4(0.5,0,0.5,1);
+				break;
+			case 2: colour = Vector4(1,0,0,1);
+				break;
+			case 3:
+			case 4: colour = Vector4(1,0,0,1);
+				break;
+			default: colour = Vector4(0,0,0,1);
+				break;
+			}
+			agentNodes[i]->target->SetColour(colour);
 			agentNodes[i]->target->SetTransform(Matrix4::Translation(Vector3(coreData.myAgents.x[i], coreData.myAgents.y[i], coreData.myAgents.z[i])));
 		}
 	}
@@ -533,8 +537,9 @@ void AIManager::update(float msec)
 
 	//cudaUpdateAgents(&coreData, &updateData, agentCount, partitionCount, msec);
 
-	//memset(updateData.playerCount, 0, 100 * sizeof(short));
-	cudaRunKernalNew(&coreData, &updateData, agentCount, partitionCount, msec, true);
+
+
+	cudaRunKernalBase(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
 	
 }
@@ -570,7 +575,6 @@ void AIManager::addAgent(PhysicsNode* a)
 	coreData.myAgents.targetLocation[agentCount] = 0;
 
 	coreData.myAgents.patrolLocation[agentCount][0] = GenerateTargetLocation(a->GetPosition());	// start patrol
-	//myAgents.patrolLocation[agentCount][0] = Vector3(0, 0, 0);
 	coreData.myAgents.patrolLocation[agentCount][1] = GenerateTargetLocation(a->GetPosition());	// end patrol
 	coreData.myAgents.patrolLocation[agentCount][2] = Vector3(0, 0, 0);							// store location
 

@@ -4,6 +4,9 @@
 #include <device_launch_parameters.h>
 #include <stdio.h>
 #include <thrust/sort.h>
+#include <thrust/version.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 
 #include "AIManager.h"
 
@@ -15,7 +18,10 @@ cudaError_t cudaCopyCore(CopyOnce* coreData);
 
 //Runs the FSM Kernal
 cudaError_t cudaRunKernal(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad);
-cudaError_t cudaRunKernalNew(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad);
+cudaError_t cudaRunKernalDEBUG(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad);
+cudaError_t cudaRunKernalBase(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad);
+cudaError_t cudaRunKernalCleanWoSort(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad);
+cudaError_t cudaRunKernalCPUSORT(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad);
 
 //Gets the data from the GPU
 cudaError_t copyDataFromGPU(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec);

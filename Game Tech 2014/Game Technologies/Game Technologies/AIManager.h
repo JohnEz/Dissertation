@@ -41,8 +41,8 @@ struct AIWorldPartition {
 };
 
 struct Agents {
-	static const int MAXAGENTS = 1024 * 40;
-	static const int AGGRORANGE = 200;
+	static const int MAXAGENTS = 1024 * 640;
+	static const int AGGRORANGE = 500;
 	static const int MAXABILITIES = 3;
 
 	State state[MAXAGENTS];
@@ -58,6 +58,8 @@ struct Agents {
 
 	int partCount[MAXAGENTS];
 	float waitedTime[MAXAGENTS];
+
+	int stateCount[MAX_STATES];
 };
 
 struct CopyOnce
@@ -82,8 +84,6 @@ struct CopyEachFrame
 
 class AIManager {
 public:
-	//AIManager(){};
-	//AIManager(int xNum, int yNum, int zNum, float height, float width, float depth);
 	~AIManager();
 
 	static AIManager* GetInstance();

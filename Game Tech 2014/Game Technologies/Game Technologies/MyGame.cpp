@@ -33,7 +33,7 @@ MyGame::MyGame()	{
 
 	Renderer::GetRenderer().SetCamera(gameCamera);
 
-	AIManager::GetInstance()->init(7,2,7, 3000, 34000, 34000);
+	AIManager::GetInstance()->init(7,2,7, 3000, (WORLDSIZE*2) + 4000, (WORLDSIZE*2) + 4000);
 
 	//myAI = AIManager(2,2,2, 14000, 14000, 14000);
 	
@@ -52,21 +52,15 @@ MyGame::MyGame()	{
 	//floor
 	allEntities.push_back(BuildQuadEntity(30000.0f));
 
-	//allEntities.push_back(BuildFloatSphereEntity(100.0f, Vector3(200, 300, 156)));
-
-	for (int i = 0; i < 1024 * 40; ++i)
+	for (int i = 0; i < 1024 * 640; ++i)
 	{
 		int x, y, z;
-
-		x = (rand() % (WORLDSIZE*2)) - WORLDSIZE;
+		
+		x = ((rand() /(float)RAND_MAX) * (WORLDSIZE*2)) - WORLDSIZE;
 		y = 50;
-		z = (rand() % (WORLDSIZE*2)) - WORLDSIZE;
-		//allAgents.push_back(BuildAgent(Vector3(x, y, z)));
+		z = ((rand() /(float)RAND_MAX) * (WORLDSIZE*2)) - WORLDSIZE;
 
-		float blue = (rand() % 80) + 20;
-		float green = (rand() % 80) + 20;
-
-		AIManager::GetInstance()->addAgent(addEnt(Vector3(x, y, z), Vector4(0,green / 100, blue / 100,1))->physicsNode);
+		AIManager::GetInstance()->addAgent(addEnt(Vector3(x, y, z), Vector4(0,0,1,1))->physicsNode);
 	}
 
 	
@@ -74,21 +68,11 @@ MyGame::MyGame()	{
 	{
 		int x, y, z;
 
-		x = (rand() % (WORLDSIZE*2)) - WORLDSIZE;
+		x = ((rand() /(float)RAND_MAX) * (WORLDSIZE*2)) - WORLDSIZE;
 		y = 50;
-		z = (rand() % (WORLDSIZE*2)) - WORLDSIZE;
-		AIManager::GetInstance()->addPlayer(addEnt(Vector3(x, y, z), Vector4(1,0,0,1))->physicsNode);
+		z = ((rand() /(float)RAND_MAX) * (WORLDSIZE*2)) - WORLDSIZE;
+		AIManager::GetInstance()->addPlayer(addEnt(Vector3(x, y, z), Vector4(0,1,0,1))->physicsNode);
 	}
-
-	//myAI.addPlayer(addEnt(Vector3(100, 50, 100), Vector4(0,1,0,1))->physicsNode);
-	//myAI.addPlayer(addEnt(Vector3(200, 50, 2000), Vector4(0,1,0,1))->physicsNode);
-	//myAI.addPlayer(addEnt(Vector3(3000, 50, 300), Vector4(0,1,0,1))->physicsNode);
-
-	//allPlayers[0] = BuildPlayer(Vector3(100, 50, 100));
-	//allPlayers[1] = BuildPlayer(Vector3(200, 50, 2000));
-	//allPlayers[2] = BuildPlayer(Vector3(3000, 50, 300));
-
-	playerCount = 3;
 
 	AIManager::GetInstance()->setupCuda();
 }

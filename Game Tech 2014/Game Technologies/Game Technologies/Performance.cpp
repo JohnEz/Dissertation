@@ -28,6 +28,12 @@ Performance::Performance()
 	currentTimePPS = 0;
 	previousTimePPS = 0;
 	PPS = 0;
+	maxPPS = 0;
+	minPPS = 1000000;
+	averagePPS = 0;
+	PPSCount = 0;
+	overallPPS = 0;
+
 
 	collisions = 0;
 }
@@ -63,5 +69,18 @@ void Performance::calculatePPS(float msec)
 
 		frameCountPPS = 0;
 
+		++PPSCount;
+		overallPPS += PPS;
+		averagePPS = overallPPS / PPSCount;
+
+		if (PPS < minPPS && PPS != 0)
+		{
+			minPPS = PPS;
+		}
+
+		if (PPS > maxPPS)
+		{
+			maxPPS = PPS;
+		}
 	}
 }

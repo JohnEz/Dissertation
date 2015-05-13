@@ -18,6 +18,10 @@ public:
 	void	setScore(int val) { score = val; };
 	void	addScore(int val) { score += val; };
 
+	float		getAveragePPS() { return averagePPS; };
+	float		getMinPPS() { return minPPS; };
+	float		getMaxPPS() { return maxPPS; };
+
 protected:
 	Performance();
 	~Performance();
@@ -33,6 +37,11 @@ protected:
 	float	currentTimePPS;
 	float	previousTimePPS;
 	float	PPS;
+	float	maxPPS;
+	float	minPPS;
+	float	averagePPS;
+	float	overallPPS;
+	int		PPSCount;
 
 	int		collisions;
 
