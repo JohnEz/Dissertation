@@ -1,5 +1,6 @@
 #include "kernal.cuh"
 #include <cmath>
+#include <assert.h>
 
 //TODO CHANGE EVERYTHING TO POINTERS, WHY DIDNT I DO THAT IN THE FIRST PLACE
 //TODO GET RID OFF ALL THE VECTOR3 TO FLOAT3 TRANSLATIONS
@@ -35,8 +36,8 @@ __device__ void cudaPatrol(CopyOnce* coreData, CopyEachFrame* updateData, short*
 	float MAXSPEED = 0.5F;
 
 	//at target
-	float diffX = coreData->myAgents.patrolLocation[a][coreData->myAgents.targetLocation[a]].x - coreData->myAgents.x[a];
-	float diffZ = coreData->myAgents.patrolLocation[a][coreData->myAgents.targetLocation[a]].z - coreData->myAgents.z[a];
+	float diffX = coreData->myAgents.patrolLocation[a].loc[coreData->myAgents.targetLocation[a]].x - coreData->myAgents.x[a];
+	float diffZ = coreData->myAgents.patrolLocation[a].loc[coreData->myAgents.targetLocation[a]].z - coreData->myAgents.z[a];
 	float absX = abs(diffX);
 	float absZ = abs(diffZ);
 
@@ -92,9 +93,9 @@ __device__ void cudaPatrol(CopyOnce* coreData, CopyEachFrame* updateData, short*
 			if (dist < aggroRange && !updateData->playerIsDead[p])
 			{
 				coreData->myAgents.state[a] = STARE_AT_PLAYER; //change state
-				coreData->myAgents.patrolLocation[a][2].x = coreData->myAgents.x[a];
-				coreData->myAgents.patrolLocation[a][2].y = coreData->myAgents.y[a];
-				coreData->myAgents.patrolLocation[a][2].z = coreData->myAgents.z[a]; //set position it left patrol
+				coreData->myAgents.patrolLocation[a].loc[2].x = coreData->myAgents.x[a];
+				coreData->myAgents.patrolLocation[a].loc[2].y = coreData->myAgents.y[a];
+				coreData->myAgents.patrolLocation[a].loc[2].z = coreData->myAgents.z[a]; //set position it left patrol
 				coreData->myAgents.targetPlayer[a] = p; // playing that is being stared at
 				i = coreData->myPlayers.MAXPLAYERS; // exit the loop
 			}
@@ -191,14 +192,14 @@ __device__ void cudaChasePlayer(CopyOnce* coreData, CopyEachFrame* updateData, f
 
 	//calculate distance to leash spot
 	float3 diff = float3();
-	diff.x = coreData->myAgents.patrolLocation[a][2].x - coreData->myAgents.x[a];
-	diff.y = coreData->myAgents.patrolLocation[a][2].y - coreData->myAgents.y[a];
-	diff.z = coreData->myAgents.patrolLocation[a][2].z - coreData->myAgents.z[a];
+	diff.x = coreData->myAgents.patrolLocation[a].loc[2].x - coreData->myAgents.x[a];
+	diff.y = coreData->myAgents.patrolLocation[a].loc[2].y - coreData->myAgents.y[a];
+	diff.z = coreData->myAgents.patrolLocation[a].loc[2].z - coreData->myAgents.z[a];
 
 	float leashDist = sqrtf((diff.x*diff.x)+(diff.y*diff.y)+(diff.z*diff.z));;
 
 	// if its too far away or if the player died leash back
-	if (leashDist > LEASHRANGE || updateData->playerIsDead[p])
+	if (leashDist > LEASHRANGE || updateData->playerIsDead[p] || coreData->myAgents.targetPlayer[a] == -1)
 	{
 		coreData->myAgents.state[a] = LEASH;
 		coreData->myAgents.targetPlayer[a] = -1;
@@ -244,8 +245,8 @@ __device__ void cudaLeashBack(CopyOnce* coreData, CopyEachFrame* updateData, flo
 	float MAXSPEED = 0.5F;
 
 	//calculate distance to leash spot
-	float diffX = coreData->myAgents.patrolLocation[a][2].x - coreData->myAgents.x[a];
-	float diffZ = coreData->myAgents.patrolLocation[a][2].z - coreData->myAgents.z[a];
+	float diffX = coreData->myAgents.patrolLocation[a].loc[2].x - coreData->myAgents.x[a];
+	float diffZ = coreData->myAgents.patrolLocation[a].loc[2].z - coreData->myAgents.z[a];
 	float absX = abs(diffX);
 	float absZ = abs(diffZ);
 
@@ -275,10 +276,10 @@ __device__ void cudaReduceCooldowns(CopyOnce* coreData, float msec)
 {
 	int a = blockIdx.x * blockDim.x + threadIdx.x;
 
-	for (int i = 0 ; i < coreData->myAgents.MAXABILITIES; ++i)
+	for (int i = 0 ; i < coreData->myAgents.myAbilities->MAXABILITIES; ++i)
 	{
-		int check = coreData->myAgents.myAbilities[a][i].cooldown > 0;
-		coreData->myAgents.myAbilities[a][i].cooldown -= msec * check;
+		int check = coreData->myAgents.myAbilities[a].abil[i].cooldown > 0;
+		coreData->myAgents.myAbilities[a].abil[i].cooldown -= msec * check;
 	}
 }
 
@@ -300,15 +301,15 @@ __device__ void cudaUseAbility(CopyOnce* coreData, CopyEachFrame* updateData, fl
 		//TODO ADD ABILITIES BACK
 		//look through abilities via priority until one is found not on cooldown
 		int i = 0;
-		while (i < coreData->myAgents.MAXABILITIES && coreData->myAgents.myAbilities[a][i].cooldown > 0.001f) {
+		while (i < coreData->myAgents.myAbilities->MAXABILITIES && coreData->myAgents.myAbilities[a].abil[i].cooldown > 0.001f) {
 			i++;
 		}
 
 		//cast ability
-		if (i < coreData->myAgents.MAXABILITIES && coreData->myAgents.myAbilities[a][i].cooldown < 0.001f)
+		if (i < coreData->myAgents.myAbilities->MAXABILITIES && coreData->myAgents.myAbilities[a].abil[i].cooldown < 0.001f)
 		{
-			coreData->myAgents.myAbilities[a][i].cooldown = coreData->myAgents.myAbilities[a][i].maxCooldown;
-			coreData->myPlayers.hp[coreData->myAgents.targetPlayer[a]] -= coreData->myAgents.myAbilities[a][i].damage;
+			coreData->myAgents.myAbilities[a].abil[i].cooldown = coreData->myAgents.myAbilities[a].abil[i].maxCooldown;
+			coreData->myPlayers.hp[coreData->myAgents.targetPlayer[a]] -= coreData->myAgents.myAbilities[a].abil[i].damage;
 		}
 
 		//if the player goes out of range, change state to chase
@@ -358,14 +359,16 @@ __device__ void cudaPatrolState(CopyOnce* coreData, CopyEachFrame* updateData, s
 
 	float MAXSPEED = 0.5F;
 
+	int mod = a < coreData->myAgents.stateCount[0]; // if this is a correct thread
+
 	//at target
-	float diffX = coreData->myAgents.patrolLocation[a][coreData->myAgents.targetLocation[a]].x - coreData->myAgents.x[a];
-	float diffZ = coreData->myAgents.patrolLocation[a][coreData->myAgents.targetLocation[a]].z - coreData->myAgents.z[a];
+	float diffX = coreData->myAgents.patrolLocation[a].loc[coreData->myAgents.targetLocation[a]].x - coreData->myAgents.x[a];
+	float diffZ = coreData->myAgents.patrolLocation[a].loc[coreData->myAgents.targetLocation[a]].z - coreData->myAgents.z[a];
 	float absX = abs(diffX);
 	float absZ = abs(diffZ);
 
 	//check its close enough to the point
-	if (absX < 0.1f && absZ < 0.1f)
+	if (absX < 0.1f && absZ < 0.1f && mod)
 	{
 		//get new target
 		coreData->myAgents.targetLocation[a]++;
@@ -383,14 +386,16 @@ __device__ void cudaPatrolState(CopyOnce* coreData, CopyEachFrame* updateData, s
 		moveZ = min(moveZ, absZ);
 
 		//set new position
-		coreData->myAgents.x[a] += moveX * ((float(0) < diffX) - (diffX < float(0)));
-		coreData->myAgents.z[a] += moveZ * ((float(0) < diffZ) - (diffZ < float(0)));
+		coreData->myAgents.x[a] += (moveX * ((float(0) < diffX) - (diffX < float(0)))) * mod;
+		coreData->myAgents.z[a] += (moveZ * ((float(0) < diffZ) - (diffZ < float(0)))) * mod;
 	}
 }
 
 __device__ void cudaPatrolTransitions(CopyOnce* coreData, CopyEachFrame* updateData, short* agentsPartitions, short* partitionsPlayers, float msec, int sCount = 0) {
 
 	int a = (blockIdx.x * blockDim.x + threadIdx.x) + sCount;
+
+	int mod = a < coreData->myAgents.stateCount[0]; // if this is a correct thread
 
 	//state transition
 	int i = 0;
@@ -417,12 +422,12 @@ __device__ void cudaPatrolTransitions(CopyOnce* coreData, CopyEachFrame* updateD
 			//if player close transition state to stare at player
 			float aggroRange = min(coreData->myAgents.AGGRORANGE, coreData->myAgents.AGGRORANGE * ((float)coreData->myAgents.level[a] / (float)coreData->myPlayers.level[p]));
 
-			if (dist < aggroRange && !updateData->playerIsDead[p])
+			if (dist < aggroRange && !updateData->playerIsDead[p] && mod)
 			{
 				coreData->myAgents.state[a] = STARE_AT_PLAYER; //change state
-				coreData->myAgents.patrolLocation[a][2].x = coreData->myAgents.x[a];
-				coreData->myAgents.patrolLocation[a][2].y = coreData->myAgents.y[a];
-				coreData->myAgents.patrolLocation[a][2].z = coreData->myAgents.z[a]; //set position it left patrol
+				coreData->myAgents.patrolLocation[a].loc[2].x = coreData->myAgents.x[a];
+				coreData->myAgents.patrolLocation[a].loc[2].y = coreData->myAgents.y[a];
+				coreData->myAgents.patrolLocation[a].loc[2].z = coreData->myAgents.z[a]; //set position it left patrol
 				coreData->myAgents.targetPlayer[a] = p; // playing that is being stared at
 				i = coreData->myPlayers.MAXPLAYERS; // exit the loop
 			}
@@ -437,7 +442,9 @@ __device__ void cudaStareAtPlayerState(CopyOnce* coreData, CopyEachFrame* update
 {
 	int a = (blockIdx.x * blockDim.x + threadIdx.x) + sCount;
 
-	coreData->myAgents.waitedTime[a] += msec;
+	int mod = a < sCount + coreData->myAgents.stateCount[1]; // if this is a correct thread
+
+	coreData->myAgents.waitedTime[a] += msec * mod;
 }
 
 __device__ void cudaStareAtPlayerTransitions(CopyOnce* coreData, CopyEachFrame* updateData, short* agentsPartitions, short* partitionsPlayers, float msec, int sCount = 0)
@@ -445,6 +452,8 @@ __device__ void cudaStareAtPlayerTransitions(CopyOnce* coreData, CopyEachFrame* 
 	int a = (blockIdx.x * blockDim.x + threadIdx.x) + sCount;
 
 	int p = coreData->myAgents.targetPlayer[a]; // target player
+
+	int mod = a < sCount + coreData->myAgents.stateCount[1]; // if this is a correct thread
 
 	//calculate distance to player
 	float3 diff = float3();
@@ -457,7 +466,7 @@ __device__ void cudaStareAtPlayerTransitions(CopyOnce* coreData, CopyEachFrame* 
 	float aggroRange = min(coreData->myAgents.AGGRORANGE, coreData->myAgents.AGGRORANGE * ((float)coreData->myAgents.level[a] / (float)coreData->myPlayers.level[p]));
 	float pullRange = (aggroRange * 0.75f) * ((float)coreData->myAgents.level[a] / (float)coreData->myPlayers.level[p]);
 
-	if ((dist < pullRange || coreData->myAgents.waitedTime[a] > 8000.0f ) && !updateData->playerIsDead[p]) // if the player is in pull range
+	if ((dist < pullRange || coreData->myAgents.waitedTime[a] > 8000.0f ) && !updateData->playerIsDead[p] && mod) // if the player is in pull range
 	{
 		coreData->myAgents.state[a] = CHASE_PLAYER;
 		coreData->myAgents.waitedTime[a] = 0.0f;
@@ -486,7 +495,7 @@ __device__ void cudaStareAtPlayerTransitions(CopyOnce* coreData, CopyEachFrame* 
 				float distNew = sqrtf((diffNew.x*diffNew.x)+(diffNew.y*diffNew.y)+(diffNew.z*diffNew.z));
 
 				// if the new distance is less switch targte
-				if (distNew <= dist  && !updateData->playerIsDead[p2])
+				if (distNew <= dist  && !updateData->playerIsDead[p2] && mod)
 				{
 					coreData->myAgents.targetPlayer[a] = p2;
 					dist = distNew;
@@ -504,7 +513,7 @@ __device__ void cudaStareAtPlayerTransitions(CopyOnce* coreData, CopyEachFrame* 
 		}
 
 		// if there are no close players at all
-		if (!playerClose)
+		if (!playerClose && mod)
 		{
 			coreData->myAgents.waitedTime[a] = 0.0f;
 			coreData->myAgents.state[a] = PATROL;
@@ -521,6 +530,8 @@ __device__ void cudaChasePlayerState(CopyOnce* coreData, CopyEachFrame* updateDa
 	int a = (blockIdx.x * blockDim.x + threadIdx.x) + sCount;
 
 	int p = coreData->myAgents.targetPlayer[a];
+
+	int mod = a < sCount + coreData->myAgents.stateCount[2]; // if this is a correct thread
 
 	//calculate distance to player
 	float3 diff = float3();
@@ -541,8 +552,8 @@ __device__ void cudaChasePlayerState(CopyOnce* coreData, CopyEachFrame* updateDa
 	moveZ = min(moveZ, absZ);
 
 	//set new position
-	coreData->myAgents.x[a] += moveX * ((float(0) < diff.x) - (diff.x < float(0)));
-	coreData->myAgents.z[a] += moveZ * ((float(0) < diff.z) - (diff.z < float(0)));
+	coreData->myAgents.x[a] += (moveX * ((float(0) < diff.x) - (diff.x < float(0)))) * mod;
+	coreData->myAgents.z[a] += (moveZ * ((float(0) < diff.z) - (diff.z < float(0)))) * mod;
 
 }
 
@@ -554,16 +565,18 @@ __device__ void cudaChasePlayerTransitions(CopyOnce* coreData, CopyEachFrame* up
 
 	int p = coreData->myAgents.targetPlayer[a];
 
+	int mod = a < sCount + coreData->myAgents.stateCount[2]; // if this is a correct thread
+
 	//calculate distance to leash spot
 	float3 diff = float3();
-	diff.x = coreData->myAgents.patrolLocation[a][2].x - coreData->myAgents.x[a];
-	diff.y = coreData->myAgents.patrolLocation[a][2].y - coreData->myAgents.y[a];
-	diff.z = coreData->myAgents.patrolLocation[a][2].z - coreData->myAgents.z[a];
+	diff.x = coreData->myAgents.patrolLocation[a].loc[2].x - coreData->myAgents.x[a];
+	diff.y = coreData->myAgents.patrolLocation[a].loc[2].y - coreData->myAgents.y[a];
+	diff.z = coreData->myAgents.patrolLocation[a].loc[2].z - coreData->myAgents.z[a];
 
 	float leashDist = sqrtf((diff.x*diff.x)+(diff.y*diff.y)+(diff.z*diff.z));;
 
 	// if its too far away or if the player died leash back
-	if (leashDist > LEASHRANGE || updateData->playerIsDead[p])
+	if ((leashDist > LEASHRANGE || updateData->playerIsDead[p]) && mod)
 	{
 		coreData->myAgents.state[a] = LEASH;
 		coreData->myAgents.targetPlayer[a] = -1;
@@ -578,7 +591,7 @@ __device__ void cudaChasePlayerTransitions(CopyOnce* coreData, CopyEachFrame* up
 		float dist = sqrtf((diff.x*diff.x)+(diff.y*diff.y)+(diff.z*diff.z));
 
 		//if close to player switch state to useability
-		if (dist < ATTACKRANGE)
+		if (dist < ATTACKRANGE && mod)
 		{
 			coreData->myAgents.state[a] = USE_ABILITY;
 		}
@@ -593,9 +606,11 @@ __device__ void cudaLeashBackState(CopyOnce* coreData, CopyEachFrame* updateData
 
 	float MAXSPEED = 0.5F;
 
+	int mod = a < sCount + coreData->myAgents.stateCount[3]; // if this is a correct thread
+
 	//calculate distance to leash spot
-	float diffX = coreData->myAgents.patrolLocation[a][2].x - coreData->myAgents.x[a];
-	float diffZ = coreData->myAgents.patrolLocation[a][2].z - coreData->myAgents.z[a];
+	float diffX = coreData->myAgents.patrolLocation[a].loc[2].x - coreData->myAgents.x[a];
+	float diffZ = coreData->myAgents.patrolLocation[a].loc[2].z - coreData->myAgents.z[a];
 	float absX = abs(diffX);
 	float absZ = abs(diffZ);
 
@@ -608,8 +623,8 @@ __device__ void cudaLeashBackState(CopyOnce* coreData, CopyEachFrame* updateData
 	moveZ = min(moveZ, absZ);
 
 	//set new position
-	coreData->myAgents.x[a] += moveX * ((float(0) < diffX) - (diffX < float(0)));
-	coreData->myAgents.z[a] += moveZ * ((float(0) < diffZ) - (diffZ < float(0)));
+	coreData->myAgents.x[a] += (moveX * ((float(0) < diffX) - (diffX < float(0)))) * mod;
+	coreData->myAgents.z[a] += (moveZ * ((float(0) < diffZ) - (diffZ < float(0)))) * mod;
 
 }
 
@@ -617,14 +632,16 @@ __device__ void cudaLeashBackTransitions(CopyOnce* coreData, CopyEachFrame* upda
 
 	int a = blockIdx.x * blockDim.x + threadIdx.x + sCount;
 
+	int mod = a < sCount + coreData->myAgents.stateCount[3]; // if this is a correct thread
+
 	//calculate distance to leash spot
-	float diffX = coreData->myAgents.patrolLocation[a][2].x - coreData->myAgents.x[a];
-	float diffZ = coreData->myAgents.patrolLocation[a][2].z - coreData->myAgents.z[a];
+	float diffX = coreData->myAgents.patrolLocation[a].loc[2].x - coreData->myAgents.x[a];
+	float diffZ = coreData->myAgents.patrolLocation[a].loc[2].z - coreData->myAgents.z[a];
 	float absX = abs(diffX);
 	float absZ = abs(diffZ);
 
 	//check its close enough to the point
-	if (absX < 0.1f && absZ < 0.1f)
+	if (absX < 0.1f && absZ < 0.1f && mod)
 	{
 		//change back to patrol
 		coreData->myAgents.state[a] = PATROL;
@@ -638,17 +655,19 @@ __device__ void cudaUseAbilityState(CopyOnce* coreData, CopyEachFrame* updateDat
 
 	int p = coreData->myAgents.targetPlayer[a];
 
+	int mod = a < sCount + coreData->myAgents.stateCount[4]; // if this is a correct thread
+
 	//look through abilities via priority until one is found not on cooldown
 	int i = 0;
-	while (i < coreData->myAgents.MAXABILITIES && coreData->myAgents.myAbilities[a][i].cooldown > 0.001f) {
+	while (i < coreData->myAgents.myAbilities->MAXABILITIES && coreData->myAgents.myAbilities[a].abil[i].cooldown > 0.001f) {
 		++i;
 	}
 
 	//cast ability
-	if (i < coreData->myAgents.MAXABILITIES && coreData->myAgents.myAbilities[a][i].cooldown < 0.001f)
+	if (i < coreData->myAgents.myAbilities->MAXABILITIES && coreData->myAgents.myAbilities[a].abil[i].cooldown < 0.001f && mod)
 	{
-		coreData->myAgents.myAbilities[a][i].cooldown = coreData->myAgents.myAbilities[a][i].maxCooldown;
-		coreData->myPlayers.hp[p] -= coreData->myAgents.myAbilities[a][i].damage;
+		coreData->myAgents.myAbilities[a].abil[i].cooldown = coreData->myAgents.myAbilities[a].abil[i].maxCooldown;
+		coreData->myPlayers.hp[p] -= coreData->myAgents.myAbilities[a].abil[i].damage;
 	}
 
 }
@@ -657,10 +676,12 @@ __device__ void cudaUseAbilityTransitions(CopyOnce* coreData, CopyEachFrame* upd
 
 	int a = blockIdx.x * blockDim.x + threadIdx.x + sCount;
 
+	int mod = a < sCount + coreData->myAgents.stateCount[4]; // if this is a correct thread
+
 	float ATTACKRANGE = 75.0f;
 	int p = coreData->myAgents.targetPlayer[a];
 
-	if (updateData->playerIsDead[p]) // if the player is dead
+	if (updateData->playerIsDead[p] && mod) // if the player is dead
 	{
 		coreData->myAgents.state[a] = LEASH;	//leash back
 		coreData->myAgents.targetPlayer[a] = -1; // set the target player to null
@@ -677,7 +698,7 @@ __device__ void cudaUseAbilityTransitions(CopyOnce* coreData, CopyEachFrame* upd
 		float dist = sqrtf((diff.x*diff.x)+(diff.y*diff.y)+(diff.z*diff.z));
 
 		//if player close transition state to stare at player
-		if (dist > (ATTACKRANGE))
+		if (dist > (ATTACKRANGE) && mod)
 		{
 			coreData->myAgents.state[a] = CHASE_PLAYER;
 		}
@@ -691,7 +712,7 @@ __global__ void cudaFSMSplit(CopyOnce* coreData, CopyEachFrame* updateData, shor
 {
 	int a = blockIdx.x * blockDim.x + threadIdx.x;
 
-	switch (coreData->myAgents.state[a]) {
+	/*switch (coreData->myAgents.state[a]) {
 	case PATROL: cudaPatrolState(coreData, updateData, agentsPartitions, partitionsPlayers, msec);
 		cudaPatrolTransitions(coreData, updateData, agentsPartitions, partitionsPlayers, msec);
 		break;
@@ -710,7 +731,9 @@ __global__ void cudaFSMSplit(CopyOnce* coreData, CopyEachFrame* updateData, shor
 	};
 
 	cudaReduceCooldowns(coreData, msec);
+	*/
 
+	//fprintf(stderr, "You forgot this isnt a thing anymore");
 }
 
 __global__ void cudaRunPatrol(CopyOnce* coreData, CopyEachFrame* updateData, short* agentsPartitions, short* partitionsPlayers, float msec) {
@@ -720,24 +743,24 @@ __global__ void cudaRunPatrol(CopyOnce* coreData, CopyEachFrame* updateData, sho
 
 __global__ void cudaRunStare(CopyOnce* coreData, CopyEachFrame* updateData, short* agentsPartitions, short* partitionsPlayers, float msec) {
 	int count = coreData->myAgents.stateCount[0];
-	//cudaStareAtPlayerState(coreData, updateData, agentsPartitions, partitionsPlayers, msec, count);
-	//cudaStareAtPlayerTransitions(coreData, updateData, agentsPartitions, partitionsPlayers, msec, count);
+	cudaStareAtPlayerState(coreData, updateData, agentsPartitions, partitionsPlayers, msec, count);
+	cudaStareAtPlayerTransitions(coreData, updateData, agentsPartitions, partitionsPlayers, msec, count);
 }
 
 __global__ void cudaRunChase(CopyOnce* coreData, CopyEachFrame* updateData, float msec) {
-	int count = coreData->myAgents.stateCount[0] + coreData->myAgents.stateCount[1] + 1;
+	int count = coreData->myAgents.stateCount[0] + coreData->myAgents.stateCount[1];
 	cudaChasePlayerState(coreData, updateData, msec, count);
 	cudaChasePlayerTransitions(coreData, updateData, msec, count);
 }
 
 __global__ void cudaRunAbility(CopyOnce* coreData, CopyEachFrame* updateData, float msec) {
-	int count = coreData->myAgents.stateCount[0] + coreData->myAgents.stateCount[1] + coreData->myAgents.stateCount[2] + 1;
+	int count = coreData->myAgents.stateCount[0] + coreData->myAgents.stateCount[1] + coreData->myAgents.stateCount[2];
 	cudaUseAbilityState(coreData, updateData, msec, count);
 	cudaUseAbilityTransitions(coreData, updateData, msec, count);
 }
 
 __global__ void cudaRunLeash(CopyOnce* coreData, CopyEachFrame* updateData, float msec) {
-	int count = coreData->myAgents.stateCount[0] + coreData->myAgents.stateCount[1] + coreData->myAgents.stateCount[2] + coreData->myAgents.stateCount[3] + 1;
+	int count = coreData->myAgents.stateCount[0] + coreData->myAgents.stateCount[1] + coreData->myAgents.stateCount[2] + coreData->myAgents.stateCount[3];
 	cudaLeashBackState(coreData, updateData, msec, count);
 	cudaLeashBackTransitions(coreData, updateData, msec, count);
 }
@@ -928,196 +951,6 @@ __global__ void cudaBroadphaseAgents2(CopyOnce* coreData, CopyEachFrame* updateD
 }
 
 #pragma endregion
-
-__global__ void SortDataOld(CopyOnce* coreData, short* agentsPartitions, int* index) {
-
-	int a = blockIdx.x * blockDim.x + threadIdx.x;
-
-	int v = index[a];
-
-	if (a < State::MAX_STATES)
-	{
-		coreData->myAgents.stateCount[a] = 0;
-	}
-
-	if (v != a)
-	{
-		//store the data before updating
-		//int level			= coreData->myAgents.level[v];
-		int state			= coreData->myAgents.state[v];
-		int targetLocation	= coreData->myAgents.targetLocation[v];
-		int targetPlayer	= coreData->myAgents.targetPlayer[v];
-		float waitedTime	= coreData->myAgents.waitedTime[v];
-		float x2			= coreData->myAgents.x[v];
-		float y2			= coreData->myAgents.y[v];
-		float z2			= coreData->myAgents.z[v];
-		float pCount		= coreData->myAgents.partCount[v];
-		//Ability abil0		= coreData->myAgents.myAbilities[v][0];
-		//Ability abil1		= coreData->myAgents.myAbilities[v][1];
-		//Ability abil2		= coreData->myAgents.myAbilities[v][2];
-
-
-		float3 loc0			= float3();
-		float3 loc1			= float3();
-		float3 loc2			= float3();
-		loc0.x				= coreData->myAgents.patrolLocation[v][0].x;
-		loc1.x				= coreData->myAgents.patrolLocation[v][1].x;
-		loc2.x				= coreData->myAgents.patrolLocation[v][2].x;
-
-		loc0.y				= coreData->myAgents.patrolLocation[v][0].y;
-		loc1.y				= coreData->myAgents.patrolLocation[v][1].y;
-		loc2.y				= coreData->myAgents.patrolLocation[v][2].y;
-
-		loc0.z				= coreData->myAgents.patrolLocation[v][0].z;
-		loc1.z				= coreData->myAgents.patrolLocation[v][1].z;
-		loc2.z				= coreData->myAgents.patrolLocation[v][2].z;
-
-		__syncthreads();
-
-		//coreData->myAgents.level[a] = level;
-
-		/*coreData->myAgents.myAbilities[a][0] = abil0;
-		coreData->myAgents.myAbilities[a][1] = abil1;
-		coreData->myAgents.myAbilities[a][2] = abil2;*/
-
-		coreData->myAgents.patrolLocation[a][0].x = loc0.x;
-		coreData->myAgents.patrolLocation[a][0].y = loc0.y;
-		coreData->myAgents.patrolLocation[a][0].z = loc0.z;
-
-		coreData->myAgents.patrolLocation[a][1].x = loc1.x;
-		coreData->myAgents.patrolLocation[a][1].y = loc1.y;
-		coreData->myAgents.patrolLocation[a][1].z = loc1.z;
-
-		coreData->myAgents.patrolLocation[a][2].x = loc2.x;
-		coreData->myAgents.patrolLocation[a][2].y = loc2.y;
-		coreData->myAgents.patrolLocation[a][2].z = loc2.z;
-
-		coreData->myAgents.state[a] = (State)state;
-		coreData->myAgents.targetLocation[a] = targetLocation;
-		coreData->myAgents.targetPlayer[a] = targetPlayer;
-		coreData->myAgents.waitedTime[a] = waitedTime;
-
-		coreData->myAgents.x[a] = x2;
-		coreData->myAgents.y[a] = y2;
-		coreData->myAgents.z[a] = z2;
-
-		coreData->myAgents.partCount[a] = pCount;
-
-
-		//int s = state;
-
-		//atomicAdd(&coreData->myAgents.stateCount[s], 1);
-		__syncthreads();
-	}
-}
-
-__global__ void SortData(CopyOnce* coreData, short* agentsPartitions, int* index) {
-
-	int a = blockIdx.x * blockDim.x + threadIdx.x;
-
-	int s = threadIdx.x;
-
-	int v = index[a];
-
-	__shared__ int level[1024];
-	__shared__ int partCount[1024];
-	__shared__ State state[1024];
-	__shared__ int targetLocation[1024];
-	__shared__ int targetPlayer[1024];
-	__shared__ float waitedTime[1024];
-	__shared__ float x[1024];
-	__shared__ float y[1024];
-	__shared__ float z[1024];
-
-
-	if (a < State::MAX_STATES)
-	{
-		coreData->myAgents.stateCount[a] = 0;
-	}
-
-
-	if (v != a)
-	{
-		level[s]				= coreData->myAgents.level[v];
-		partCount[s]			= coreData->myAgents.partCount[v];
-		state[s]				= coreData->myAgents.state[v];
-		targetLocation[s]		= coreData->myAgents.targetLocation[v];
-		targetPlayer[s]			= coreData->myAgents.targetPlayer[v];
-		waitedTime[s]			= coreData->myAgents.waitedTime[v];
-		x[s]					= coreData->myAgents.x[v];
-		y[s]					= coreData->myAgents.y[v];
-		z[s]					= coreData->myAgents.z[v];
-
-		__syncthreads();
-
-
-		coreData->myAgents.level[a]				= level[s];
-		coreData->myAgents.partCount[a]			= partCount[s];
-		coreData->myAgents.state[a]				= state[s];
-		coreData->myAgents.targetLocation[a]	= targetLocation[s];
-		coreData->myAgents.targetPlayer[a]		= targetPlayer[s];
-		coreData->myAgents.waitedTime[a]		= waitedTime[s];
-		coreData->myAgents.x[a]					= x[s];
-		coreData->myAgents.y[a]					= y[s];
-		coreData->myAgents.z[a]					= z[s];
-
-
-		int sT = state[s];
-
-		atomicAdd(&coreData->myAgents.stateCount[sT], 1);
-		__syncthreads();
-	}
-}
-
-__global__ void SortPatrolData(CopyOnce* coreData, short* agentsPartitions, int* index) {
-
-	int a = blockIdx.x * blockDim.x + threadIdx.x;
-
-	int s = threadIdx.x;
-
-	int v = index[a];
-
-	__shared__ float3 loc0[1024];
-	__shared__ float3 loc1[1024];
-	__shared__ float3 loc2[1024];
-
-	if (a < State::MAX_STATES)
-	{
-		coreData->myAgents.stateCount[a] = 0;
-	}
-
-
-	if (v != a)
-	{
-		loc0[s].x				= coreData->myAgents.patrolLocation[v][0].x;
-		loc1[s].x				= coreData->myAgents.patrolLocation[v][1].x;
-		loc2[s].x				= coreData->myAgents.patrolLocation[v][2].x;
-
-		loc0[s].y				= coreData->myAgents.patrolLocation[v][0].y;
-		loc1[s].y				= coreData->myAgents.patrolLocation[v][1].y;
-		loc2[s].y				= coreData->myAgents.patrolLocation[v][2].y;
-
-		loc0[s].z				= coreData->myAgents.patrolLocation[v][0].z;
-		loc1[s].z				= coreData->myAgents.patrolLocation[v][1].z;
-		loc2[s].z				= coreData->myAgents.patrolLocation[v][2].z;
-
-		__syncthreads();
-
-		coreData->myAgents.patrolLocation[a][0].x = loc0[s].x;
-		coreData->myAgents.patrolLocation[a][1].x = loc1[s].x;
-		coreData->myAgents.patrolLocation[a][2].x = loc2[s].x;
-
-		coreData->myAgents.patrolLocation[a][0].y = loc0[s].y;
-		coreData->myAgents.patrolLocation[a][1].y = loc1[s].y;
-		coreData->myAgents.patrolLocation[a][2].y = loc2[s].y;
-
-		coreData->myAgents.patrolLocation[a][0].z = loc0[s].z;
-		coreData->myAgents.patrolLocation[a][1].z = loc1[s].z;
-		coreData->myAgents.patrolLocation[a][2].z = loc2[s].z;
-
-		__syncthreads();
-	}
-}
 
 cudaError_t cudaCopyCore(CopyOnce* coreData)
 {
@@ -1922,6 +1755,288 @@ cudaError_t copyDataFromGPU(CopyOnce* coreData, CopyEachFrame* updateData, const
 
 
 
+cudaError_t cudaGPUSort(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad)
+{
+	AIManager::GetInstance()->d_updateData = 0;
+	short* d_agentPartitions = 0;
+	short* d_partitionPlayers = 0;
+
+	cudaError_t cudaStatus;
+	int blockSize;      // The launch configurator returned block size 
+	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
+	int gridSize;       // The actual grid size needed, based on input size
+
+	//created an indicies array and storage arrays
+	int				index[coreData->myAgents.MAXAGENTS];
+	int				iStore[coreData->myAgents.MAXAGENTS];
+	float			fStore[coreData->myAgents.MAXAGENTS];
+
+	static AgentAbilities	*aStore = (AgentAbilities*) malloc(Agents::MAXAGENTS * sizeof(AgentAbilities));
+	static PatrolLocations *vStore = (PatrolLocations*) malloc(Agents::MAXAGENTS * sizeof(PatrolLocations));
+	memset(aStore, 0, coreData->myAgents.MAXAGENTS * sizeof(AgentAbilities));
+	memset(vStore, 0, coreData->myAgents.MAXAGENTS * sizeof(PatrolLocations));
+
+	//You need to do this at some point, once. Consider moving initialisation of astore/vstore outside of this function. IT STILL COUNTS AS A MEMORY LEAK YOU NOOB :D
+	//free(aStore);
+	//free(vStore);
+
+	//fill index array
+	for (int i = 0; i < coreData->myAgents.MAXAGENTS; ++i)
+	{
+		index[i] = i;
+	}
+
+	//sort data via state
+	thrust::sort_by_key(coreData->myAgents.state, coreData->myAgents.state + agentCount, index);
+	cudaStatus = cudaDeviceSynchronize();
+
+	//sort extra data via index
+	thrust::gather(index, index + agentCount, coreData->myAgents.x, fStore);
+	thrust::copy(fStore, fStore + agentCount, coreData->myAgents.x);
+	cudaStatus = cudaDeviceSynchronize();
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.y, fStore);
+	thrust::copy(fStore, fStore + agentCount, coreData->myAgents.y);
+	cudaStatus = cudaDeviceSynchronize();
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.z, fStore);
+	thrust::copy(fStore, fStore + agentCount, coreData->myAgents.z);
+	cudaStatus = cudaDeviceSynchronize();
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.level, iStore);
+	thrust::copy(iStore, iStore + agentCount, coreData->myAgents.level);
+	cudaStatus = cudaDeviceSynchronize();
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.targetLocation, iStore);
+	thrust::copy(iStore, iStore + agentCount, coreData->myAgents.targetLocation);
+	cudaStatus = cudaDeviceSynchronize();
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.targetPlayer, iStore);
+	thrust::copy(iStore, iStore + agentCount, coreData->myAgents.targetPlayer);
+	cudaStatus = cudaDeviceSynchronize();
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.waitedTime, fStore);
+	thrust::copy(fStore, fStore + agentCount, coreData->myAgents.waitedTime);
+	cudaStatus = cudaDeviceSynchronize();
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.myAbilities, aStore);
+	thrust::copy(aStore, aStore + agentCount, coreData->myAgents.myAbilities);
+	cudaStatus = cudaDeviceSynchronize();
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.patrolLocation, vStore);
+	thrust::copy(vStore, vStore + agentCount, coreData->myAgents.patrolLocation);
+
+	cudaStatus = cudaDeviceSynchronize();
+
+	//count how many agents are in each state
+	for (int i = 0; i < coreData->myAgents.MAXAGENTS; ++i)
+	{
+		coreData->myAgents.stateCount[ coreData->myAgents.state[i] ]++;
+	}
+
+	//COPY THE NEW DATA TO THE GPU
+	//////////////////////////////
+
+	//copy Core Data
+	cudaCopyCore(coreData);
+
+	// Update Data
+	cudaStatus = cudaMalloc((void**)&AIManager::GetInstance()->d_updateData, sizeof(CopyEachFrame));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	// Pointer Data
+	cudaStatus = cudaMalloc((void**)&d_agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	// Pointer Data
+	cudaStatus = cudaMalloc((void**)&d_partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	//Pass pointers their data
+
+	//Update Data
+	cudaStatus = cudaMemcpy(AIManager::GetInstance()->d_updateData, updateData, sizeof(CopyEachFrame), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//Agent's Partitions
+	cudaStatus = cudaMemcpy(d_agentPartitions, updateData->agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//Partition's Players
+	cudaStatus = cudaMemcpy(d_partitionPlayers, updateData->partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+
+	//run the broadphase on the gpu
+	if (runBroad)
+	{
+		//BROADPHASE FOR PLAYERS
+		////////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphasePlayers2, 0, partitionCount*coreData->myPlayers.MAXPLAYERS);
+
+		// Round up according to array size 
+		gridSize = (partitionCount*coreData->myPlayers.MAXPLAYERS + blockSize - 1) / blockSize;
+
+		cudaBroadphasePlayers2<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_partitionPlayers, partitionCount);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "1st cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		//BROADPHASE FOR AGENTS
+		///////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount);
+
+		// Round up according to array size 
+		//gridSize = (agentCount*partitionCount + blockSize - 1) / blockSize;
+		gridSize = (agentCount + blockSize - 1) / blockSize;
+
+		cudaBroadphaseAgents<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, partitionCount);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "2nd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+	}
+
+	//get the mingrid and blocksize
+	//cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSM, 0, agentCount);
+
+	// Round up according to array size 
+	//gridSize = (agentCount + blockSize - 1) / blockSize;
+
+	// Launch a kernel on the GPU with one thread for each element.
+	//cudaFSM<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
+
+	//run Patrol agents
+	if (coreData->myAgents.stateCount[0] != 0)
+	{
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaRunPatrol, 0, coreData->myAgents.stateCount[0]);
+
+		// Round up according to array size 
+		gridSize = (coreData->myAgents.stateCount[0] + blockSize - 1) / blockSize;
+
+		cudaRunPatrol<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
+	}
+
+	//run stare agents
+	if (coreData->myAgents.stateCount[1] != 0)
+	{
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaRunStare, 0, coreData->myAgents.stateCount[1]);
+
+		// Round up according to array size 
+		gridSize = (coreData->myAgents.stateCount[1] + blockSize - 1) / blockSize;
+
+		cudaRunStare<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
+	}
+
+	//run chase agents
+	if (coreData->myAgents.stateCount[2] != 0)
+	{
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaRunChase, 0, coreData->myAgents.stateCount[2]);
+
+		// Round up according to array size 
+		gridSize = (coreData->myAgents.stateCount[2] + blockSize - 1) / blockSize;
+
+		cudaRunChase<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, msec);
+	}
+
+	//run attack agents
+	if (coreData->myAgents.stateCount[3] != 0)
+	{
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaRunAbility, 0, coreData->myAgents.stateCount[3]);
+
+		// Round up according to array size 
+		gridSize = (coreData->myAgents.stateCount[3] + blockSize - 1) / blockSize;
+
+		cudaRunAbility<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, msec);
+	}
+
+	//run leash agents
+	if (coreData->myAgents.stateCount[4] != 0)
+	{
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaRunLeash, 0, coreData->myAgents.stateCount[4]);
+
+		// Round up according to array size 
+		gridSize = (coreData->myAgents.stateCount[4] + blockSize - 1) / blockSize;
+
+		cudaRunLeash<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, msec);
+	}
+
+	// Check for any errors launching the kernel
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+	// cudaDeviceSynchronize waits for the kernel to finish, and returns
+	// any errors encountered during the launch.
+	cudaStatus = cudaDeviceSynchronize();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "3rd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+		fprintf(stderr, cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+	//clear partition data as we dont need to copy it back 
+	cudaFree(d_agentPartitions);
+	cudaFree(d_partitionPlayers);
+
+	return cudaStatus;
+}
+
 cudaError_t cudaBasicGPU2(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec)
 {
 	//COPY DATA TO THE GPU
@@ -2702,12 +2817,10 @@ cudaError_t cudaRunKernalCPUSORT(CopyOnce* coreData, CopyEachFrame* updateData, 
 		index[i] = i;
 	}
 
-	int		iStore[coreData->myAgents.MAXAGENTS];
-	float	fStore[coreData->myAgents.MAXAGENTS];
-	Ability (*aStore)[3] = coreData->myAgents.myAbilities;
-	Vector3 (*vStore)[3] = coreData->myAgents.patrolLocation;
-
-
+	int				iStore[coreData->myAgents.MAXAGENTS];
+	float			fStore[coreData->myAgents.MAXAGENTS];
+	AgentAbilities	(*aStore) = coreData->myAgents.myAbilities;
+	PatrolLocations (*vStore) = coreData->myAgents.patrolLocation;
 
 	thrust::stable_sort_by_key(coreData->myAgents.state, coreData->myAgents.state + agentCount, index);
 	cudaStatus = cudaDeviceSynchronize();
@@ -2733,13 +2846,21 @@ cudaError_t cudaRunKernalCPUSORT(CopyOnce* coreData, CopyEachFrame* updateData, 
 	thrust::gather(index, index + agentCount, coreData->myAgents.waitedTime, fStore);
 	thrust::copy(fStore, fStore + agentCount, coreData->myAgents.waitedTime);
 
-	//thrust::gather(index, index + agentCount, *coreData->myAgents.myAbilities, *aStore);
-	//thrust::copy(*aStore, *aStore + agentCount, *coreData->myAgents.myAbilities);
+	thrust::gather(index, index + agentCount, coreData->myAgents.myAbilities, aStore);
+	thrust::copy(aStore, aStore + agentCount, coreData->myAgents.myAbilities);
 
-	thrust::gather(index, index + agentCount, coreData->myAgents.patrolLocation[0], vStore[0]);
-	thrust::copy(*vStore, *vStore + agentCount, *coreData->myAgents.patrolLocation);
+	thrust::gather(index, index + agentCount, coreData->myAgents.patrolLocation, vStore);
+	thrust::copy(vStore, vStore + agentCount, coreData->myAgents.patrolLocation);
 
 	cudaStatus = cudaDeviceSynchronize();
+
+	int count;
+
+	for (int i = 0; i < coreData->myAgents.MAXAGENTS; ++i)
+	{
+		coreData->myAgents.stateCount[ coreData->myAgents.state[i] ]++;
+	}
+
 
 
 	cudaStatus = cudaMemcpy(coreData->myAgents.stateCount, AIManager::GetInstance()->d_coreData->myAgents.stateCount, MAX_STATES * sizeof(int), cudaMemcpyDeviceToHost);
@@ -2751,239 +2872,6 @@ cudaError_t cudaRunKernalCPUSORT(CopyOnce* coreData, CopyEachFrame* updateData, 
 	cudaStatus = cudaMemcpy(updateData->agentPartitions, d_agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short), cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "cudaMemcpy failed part!");
-		return cudaStatus;
-	}
-
-	//clear partition data as we dont need to copy it back //POTENTIAL PROBLEM HERE
-	cudaFree(d_agentPartitions);
-	cudaFree(d_partitionPlayers);
-
-	return cudaStatus;
-}
-
-cudaError_t cudaRunKernalClean(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad)
-{
-	AIManager::GetInstance()->d_updateData = 0;
-	short* d_agentPartitions = 0;
-	short* d_partitionPlayers = 0;
-	int* d_index = 0;
-
-	cudaError_t cudaStatus;
-	int blockSize;      // The launch configurator returned block size 
-	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
-	int gridSize;       // The actual grid size needed, based on input size
-
-
-	int* index;
-
-	index = new int[coreData->myAgents.MAXAGENTS];
-
-	for (int i = 0; i < coreData->myAgents.MAXAGENTS; ++i)
-	{
-		index[i] = i;
-	}
-
-	thrust::sort_by_key(coreData->myAgents.state, coreData->myAgents.state + agentCount, index);
-	cudaStatus = cudaDeviceSynchronize();
-
-	//COPY THE NEW DATA TO THE GPU
-	//////////////////////////////
-
-	// Sort Data
-	cudaStatus = cudaMalloc((void**)&d_index, coreData->myAgents.MAXAGENTS * sizeof(int));
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed!");
-		return cudaStatus;
-	}
-
-	// Update Data
-	cudaStatus = cudaMalloc((void**)&AIManager::GetInstance()->d_updateData, sizeof(CopyEachFrame));
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed!");
-		return cudaStatus;
-	}
-
-	// Pointer Data
-	cudaStatus = cudaMalloc((void**)&d_agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short));
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed!");
-		return cudaStatus;
-	}
-
-	// Pointer Data
-	cudaStatus = cudaMalloc((void**)&d_partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short));
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed!");
-		return cudaStatus;
-	}
-
-	//Pass pointers their data
-
-	//Sort Data
-	cudaStatus = cudaMemcpy(d_index, index, coreData->myAgents.MAXAGENTS * sizeof(int), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		return cudaStatus;
-	}
-
-
-	//Update Data
-	cudaStatus = cudaMemcpy(AIManager::GetInstance()->d_updateData, updateData, sizeof(CopyEachFrame), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		return cudaStatus;
-	}
-
-	//Agent's Partitions
-	cudaStatus = cudaMemcpy(d_agentPartitions, updateData->agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		return cudaStatus;
-	}
-
-	//Partition's Players
-	cudaStatus = cudaMemcpy(d_partitionPlayers, updateData->partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		return cudaStatus;
-	}
-
-	//Sort the data
-	////////////////////////////
-
-	//get the mingrid and blocksize
-	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, SortData, 0, agentCount);
-
-	// Round up according to array size 
-	gridSize = (agentCount + blockSize - 1) / blockSize;
-
-	SortData<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, d_agentPartitions, d_index);
-
-	// Check for any errors launching the kernel
-	cudaStatus = cudaGetLastError();
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-		return cudaStatus;
-	}
-
-	// cudaDeviceSynchronize waits for the kernel to finish, and returns
-	// any errors encountered during the launch.
-	cudaStatus = cudaDeviceSynchronize();
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "1st cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-		fprintf(stderr, cudaGetErrorString(cudaStatus));
-		return cudaStatus;
-	}
-
-	cudaStatus = cudaMemcpy(coreData->myAgents.stateCount, AIManager::GetInstance()->d_coreData->myAgents.stateCount, MAX_STATES * sizeof(int), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed part!");
-		return cudaStatus;
-	}
-
-	//run the broadphase on the gpu
-	if (runBroad)
-	{
-		//BROADPHASE FOR PLAYERS
-		////////////////////////
-
-		//get the mingrid and blocksize
-		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphasePlayers2, 0, partitionCount*coreData->myPlayers.MAXPLAYERS);
-
-		// Round up according to array size 
-		gridSize = (partitionCount*coreData->myPlayers.MAXPLAYERS + blockSize - 1) / blockSize;
-
-		cudaBroadphasePlayers2<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_partitionPlayers, partitionCount);
-
-		// Check for any errors launching the kernel
-		cudaStatus = cudaGetLastError();
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-			return cudaStatus;
-		}
-
-		// cudaDeviceSynchronize waits for the kernel to finish, and returns
-		// any errors encountered during the launch.
-		cudaStatus = cudaDeviceSynchronize();
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "1st cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-			fprintf(stderr, cudaGetErrorString(cudaStatus));
-			return cudaStatus;
-		}
-
-		//BROADPHASE FOR AGENTS
-		///////////////////////
-
-		//get the mingrid and blocksize
-		//cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount*partitionCount);
-		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount);
-
-		// Round up according to array size 
-		//gridSize = (agentCount*partitionCount + blockSize - 1) / blockSize;
-		gridSize = (agentCount + blockSize - 1) / blockSize;
-
-		cudaBroadphaseAgents<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, partitionCount);
-
-		// Check for any errors launching the kernel
-		cudaStatus = cudaGetLastError();
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-			return cudaStatus;
-		}
-
-		// cudaDeviceSynchronize waits for the kernel to finish, and returns
-		// any errors encountered during the launch.
-		cudaStatus = cudaDeviceSynchronize();
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "2nd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-			fprintf(stderr, cudaGetErrorString(cudaStatus));
-			return cudaStatus;
-		}
-
-	}
-
-	//PATROL
-	////////
-
-	if (coreData->myAgents.stateCount[0] != 0)
-	{
-		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaRunPatrol, 0, coreData->myAgents.stateCount[0]);
-
-		// Round up according to array size 
-		gridSize = (coreData->myAgents.stateCount[0] + blockSize - 1) / blockSize;
-
-		// Launch a kernel on the GPU with one thread for each element.
-		cudaRunPatrol<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
-	}
-
-	//STARE
-	///////
-
-	if (coreData->myAgents.stateCount[1] != 0)
-	{
-		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaRunStare, 0, coreData->myAgents.stateCount[1]);
-
-		// Round up according to array size 
-		gridSize = (coreData->myAgents.stateCount[1] + blockSize - 1) / blockSize;
-
-		// Launch a kernel on the GPU with one thread for each element.
-		cudaRunStare<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
-	}
-
-
-	// Check for any errors launching the kernel
-	cudaStatus = cudaGetLastError();
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-		return cudaStatus;
-	}
-
-	// cudaDeviceSynchronize waits for the kernel to finish, and returns
-	// any errors encountered during the launch.
-	cudaStatus = cudaDeviceSynchronize();
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "3rd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-		fprintf(stderr, cudaGetErrorString(cudaStatus));
 		return cudaStatus;
 	}
 

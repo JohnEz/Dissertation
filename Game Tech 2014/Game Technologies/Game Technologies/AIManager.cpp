@@ -78,8 +78,8 @@ void Patrol(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float msec)
 	float MAXSPEED = 0.5F;
 
 	//at target
-	float disX = coreData->myAgents.patrolLocation[*a][coreData->myAgents.targetLocation[*a]].x - coreData->myAgents.x[*a];
-	float disZ = coreData->myAgents.patrolLocation[*a][coreData->myAgents.targetLocation[*a]].z - coreData->myAgents.z[*a];
+	float disX = coreData->myAgents.patrolLocation[*a].loc[coreData->myAgents.targetLocation[*a]].x - coreData->myAgents.x[*a];
+	float disZ = coreData->myAgents.patrolLocation[*a].loc[coreData->myAgents.targetLocation[*a]].z - coreData->myAgents.z[*a];
 	float absX = abs(disX);
 	float absZ = abs(disZ);
 
@@ -128,7 +128,7 @@ void Patrol(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float msec)
 			if (dist < aggroRange && !updateData->playerIsDead[p])
 			{
 				coreData->myAgents.state[*a] = STARE_AT_PLAYER; //change state
-				coreData->myAgents.patrolLocation[*a][2] = Vector3(coreData->myAgents.x[*a], coreData->myAgents.y[*a], coreData->myAgents.z[*a]); //set position it left patrol
+				coreData->myAgents.patrolLocation[*a].loc[2] = Vector3(coreData->myAgents.x[*a], coreData->myAgents.y[*a], coreData->myAgents.z[*a]); //set position it left patrol
 				coreData->myAgents.targetPlayer[*a] = p; // playing that is being stared at
 				i = coreData->myPlayers.MAXPLAYERS; // exit the loop
 			}
@@ -216,9 +216,9 @@ void chasePlayer(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float ms
 	int p = coreData->myAgents.targetPlayer[*a];
 
 	//calculate distance to leash spot
-	float diffX = coreData->myAgents.patrolLocation[*a][2].x - coreData->myAgents.x[*a];
-	float diffY = coreData->myAgents.patrolLocation[*a][2].y - coreData->myAgents.y[*a];
-	float diffZ = coreData->myAgents.patrolLocation[*a][2].z - coreData->myAgents.z[*a];
+	float diffX = coreData->myAgents.patrolLocation[*a].loc[2].x - coreData->myAgents.x[*a];
+	float diffY = coreData->myAgents.patrolLocation[*a].loc[2].y - coreData->myAgents.y[*a];
+	float diffZ = coreData->myAgents.patrolLocation[*a].loc[2].z - coreData->myAgents.z[*a];
 
 	Vector3 leashDiff = Vector3(diffX, diffY, diffZ);
 	float leashDist = sqrtf(Vector3::Dot(leashDiff, leashDiff));
@@ -266,8 +266,8 @@ void leashBack(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float msec
 	float MAXSPEED = 0.5F;
 
 	//calculate distance to leash spot
-	float diffX = coreData->myAgents.patrolLocation[*a][2].x - coreData->myAgents.x[*a];
-	float diffZ = coreData->myAgents.patrolLocation[*a][2].z - coreData->myAgents.z[*a];
+	float diffX = coreData->myAgents.patrolLocation[*a].loc[2].x - coreData->myAgents.x[*a];
+	float diffZ = coreData->myAgents.patrolLocation[*a].loc[2].z - coreData->myAgents.z[*a];
 	float absX = abs(diffX);
 	float absZ = abs(diffZ);
 
@@ -309,19 +309,18 @@ void useAbility(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float mse
 		//TODO ADD ABILITIES BACK
 		//look through abilities via priority until one is found not on cooldown
 		int i = 0;
-		while (i < coreData->myAgents.MAXABILITIES && coreData->myAgents.myAbilities[*a][i].cooldown > 0.001f) {
+		while (i < coreData->myAgents.myAbilities->MAXABILITIES && coreData->myAgents.myAbilities[*a].abil[i].cooldown > 0.001f) {
 			i++;
 		}
 
 		//cast ability
-		if (i < coreData->myAgents.MAXABILITIES && coreData->myAgents.myAbilities[*a][i].cooldown < 0.001f)
+		if (i < coreData->myAgents.myAbilities->MAXABILITIES && coreData->myAgents.myAbilities[*a].abil[i].cooldown < 0.001f)
 		{
-			coreData->myAgents.myAbilities[*a][i].cooldown = coreData->myAgents.myAbilities[*a][i].maxCooldown;
-			coreData->myPlayers.hp[coreData->myAgents.targetPlayer[*a]] -= coreData->myAgents.myAbilities[*a][i].damage;
+			coreData->myAgents.myAbilities[*a].abil[i].cooldown = coreData->myAgents.myAbilities[*a].abil[i].maxCooldown;
+			coreData->myPlayers.hp[coreData->myAgents.targetPlayer[*a]] -= coreData->myAgents.myAbilities[*a].abil[i].damage;
 		}
 
 		//if the player goes out of range, change state to chase
-		//calculate distance to player
 		//calculate distance to player
 		Vector3 playerPos = Vector3(coreData->myPlayers.x[p], coreData->myPlayers.y[p], coreData->myPlayers.z[p]);
 		Vector3 diff = playerPos - Vector3(coreData->myAgents.x[*a], coreData->myAgents.y[*a], coreData->myAgents.z[*a]);
@@ -337,11 +336,11 @@ void useAbility(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float mse
 
 void reduceCooldowns(int* a, CopyOnce* coreData, float msec)
 {
-	for (int i = 0 ; i < Agents::MAXABILITIES; ++i)
+	for (int i = 0 ; i < AgentAbilities::MAXABILITIES; ++i)
 	{
-		if (coreData->myAgents.myAbilities[*a][i].cooldown > 0)
+		if (coreData->myAgents.myAbilities[*a].abil[i].cooldown > 0)
 		{
-			coreData->myAgents.myAbilities[*a][i].cooldown -= msec;
+			coreData->myAgents.myAbilities[*a].abil[i].cooldown -= msec;
 		}
 	}
 }
@@ -459,7 +458,7 @@ void AIManager::Broadphase()
 
 void AIManager::setupCuda()
 {
-#if !defined (BASICCPU) && !defined (BASICGPU) && !defined (NO_AI)
+#if !defined (BASICCPU) && !defined (BASICGPU) && !defined (NO_AI) && !defined (DEBUG)
 	d_coreData = 0;
 
 	cudaCopyCore(&coreData);
@@ -496,12 +495,14 @@ void AIManager::update(float msec)
 			{
 			case 0: colour = Vector4(0,0,1,1);
 				break;
-			case 1:colour = Vector4(0.5,0,0.5,1);
+			case 1:colour = Vector4(1,0,0,1);
 				break;
-			case 2: colour = Vector4(1,0,0,1);
+			case 2: colour = Vector4(0,1,0,1);
 				break;
 			case 3:
-			case 4: colour = Vector4(1,0,0,1);
+				colour = Vector4(0,0,0,1);
+				break;
+			case 4: colour = Vector4(0.7,0.7,0.7,1);
 				break;
 			default: colour = Vector4(0,0,0,1);
 				break;
@@ -559,15 +560,18 @@ void AIManager::update(float msec)
 	cudaGPUSplit(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
 #elif defined (DEBUG)
-	cudaRunKernalCPUSORT(&coreData, &updateData, agentCount, partitionCount, msec, true);
+	memset(updateData.agentPartitions, -1, (Agents::MAXAGENTS*8) * sizeof(short));
+	memset(coreData.myAgents.stateCount, 0, MAX_STATES * sizeof(int));
+	cudaGPUSort(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
+	clearCoreData();
 #endif
 	//cudaRunKernalBase(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	//copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
 	
 }
 
-bool AIManager::CheckBounding(const Vector3& n, float aggroRange,Vector3 pos, Vector3 halfDim)
+bool AIManager::CheckBounding(const Vector3& n, float aggroRange, Vector3 pos, Vector3 halfDim)
 {
 	float dist = abs(pos.x - n.x);
 	float sum = halfDim.x + aggroRange;
@@ -597,21 +601,21 @@ void AIManager::addAgent(PhysicsNode* a)
 
 	coreData.myAgents.targetLocation[agentCount] = 0;
 
-	//coreData.myAgents.patrolLocation[agentCount][0] = GenerateTargetLocation(a->GetPosition());	// start patrol
-	//coreData.myAgents.patrolLocation[agentCount][1] = GenerateTargetLocation(a->GetPosition());	// end patrol
-	//coreData.myAgents.patrolLocation[agentCount][2] = Vector3(0, 0, 0);							// store location
+	coreData.myAgents.patrolLocation[agentCount].loc[0] = a->GetPosition();	// start patrol
+	coreData.myAgents.patrolLocation[agentCount].loc[1] = GenerateTargetLocation(a->GetPosition());	// end patrol
+	coreData.myAgents.patrolLocation[agentCount].loc[2] = Vector3(0, 0, 0);							// store location
 
-	coreData.myAgents.patrolLocation[agentCount][0] = Vector3(0, 0, 0);	// start patrol
-	coreData.myAgents.patrolLocation[agentCount][1] = Vector3(1, 1, 1);	// end patrol
-	coreData.myAgents.patrolLocation[agentCount][2] = Vector3(2, 2, 2);	// store location
+	//coreData.myAgents.patrolLocation[agentCount].loc[0] = Vector3(agentCount, 0, agentCount);	// start patrol
+	//coreData.myAgents.patrolLocation[agentCount].loc[1] = Vector3(0, agentCount, 0);	// end patrol
+	//coreData.myAgents.patrolLocation[agentCount].loc[2] = Vector3(0, 0, 0);								// store location
 
 	coreData.myAgents.targetPlayer[agentCount] = -1; // no target player
 
-	coreData.myAgents.myAbilities[agentCount][0] = agentAbilities[0];
-	coreData.myAgents.myAbilities[agentCount][1] = agentAbilities[1];
-	coreData.myAgents.myAbilities[agentCount][2] = agentAbilities[4];
+	coreData.myAgents.myAbilities[agentCount].abil[0] = agentAbilities[0];
+	coreData.myAgents.myAbilities[agentCount].abil[1] = agentAbilities[1];
+	coreData.myAgents.myAbilities[agentCount].abil[2] = agentAbilities[4];
 
-	coreData.myAgents.level[agentCount] = 100; //(rand() % 100) + 1; // randomly generate level
+	coreData.myAgents.level[agentCount] = agentCount; //(rand() % 100) + 1; // randomly generate level
 
 	coreData.myAgents.x[agentCount] = a->GetPosition().x; // store the x in an array
 	coreData.myAgents.y[agentCount] = a->GetPosition().y; // store the y in an array

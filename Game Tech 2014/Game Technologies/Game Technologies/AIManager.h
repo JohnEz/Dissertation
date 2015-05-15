@@ -40,16 +40,24 @@ struct AIWorldPartition {
 	Vector3 pos[MAXPARTITIONS];
 };
 
+struct PatrolLocations {
+	Vector3 loc[3];
+};
+
+struct AgentAbilities {
+	static const int MAXABILITIES = 3;
+	Ability abil[MAXABILITIES];
+};
+
 struct Agents {
 	static const int MAXAGENTS = 1024 * 40;
 	static const int AGGRORANGE = 500;
-	static const int MAXABILITIES = 3;
 
 	State state[MAXAGENTS];
 	int targetLocation[MAXAGENTS];
-	Vector3 patrolLocation[MAXAGENTS][3];
+	PatrolLocations patrolLocation[MAXAGENTS];
 	int targetPlayer[MAXAGENTS];
-	Ability myAbilities[MAXAGENTS][MAXABILITIES];
+	AgentAbilities myAbilities[MAXAGENTS];
 	int level[MAXAGENTS];
 
 	float x[MAXAGENTS];
@@ -81,6 +89,8 @@ struct CopyEachFrame
 	short* partitionPlayers; //players in the partition
 	int playerCount[AIWorldPartition::MAXPARTITIONS];	 //number of players in the partition
 };
+
+
 
 class AIManager {
 public:
