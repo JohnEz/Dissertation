@@ -7,12 +7,16 @@ void (*states[MAX_STATES]) (int* a, CopyOnce* coreData, CopyEachFrame* updateDat
 
 AIManager* AIManager::aiInst = 0;
 
-#define	BASICPU
+//#define NO_AI
+//#define BASICCPU
 //#define BASICGPU
+//#define LESS_DATA_GPU
 //#define GPU_OLD_BROAD
 //#define GPU_NEW_BROAD
+//#define GPU_BROAD_AGENTS
 //#define SPLIT_GPU
 //#define SPLIT_GPU_BROAD
+#define DEBUG
 
 
 AIWorldPartition createWorldPartitions(int xNum, int yNum, int zNum, float height, float width, float depth, const Vector3 halfDim)
@@ -404,7 +408,7 @@ void AIManager::init(int xNum, int yNum, int zNum, float height, float width, fl
 	coreData.myAgents.stateCount[0] = Agents::MAXAGENTS;
 }
 
-void AIManager::Broadphase(float msec)
+void AIManager::Broadphase()
 {
 	//loop for all world partitions
 	for (int i = 0; i < AIWorldPartition::MAXPARTITIONS; ++i) {
@@ -455,9 +459,11 @@ void AIManager::Broadphase(float msec)
 
 void AIManager::setupCuda()
 {
+#if !defined (BASICCPU) && !defined (BASICGPU) && !defined (NO_AI)
 	d_coreData = 0;
 
 	cudaCopyCore(&coreData);
+#endif
 }
 
 void AIManager::dismantleCuda()
@@ -468,8 +474,8 @@ void AIManager::dismantleCuda()
 
 void AIManager::update(float msec)
 {
-#if defined (BASICGPU) || defined (BASICGPU) || defined (SPLITGPU)
-	Broadphase(msec);
+#if defined (BASICCPU) || defined (BASICGPU) || defined (SPLIT_GPU) || defined (LESS_DATA_GPU)
+	Broadphase();
 #endif
 
 	
@@ -477,7 +483,7 @@ void AIManager::update(float msec)
 	for (int i = 0; i < agentCount; ++i)
 	{
 		//run the state functions
-		#if defined (BASICGPU)
+		#if defined (BASICCPU)
 			states[coreData.myAgents.state[i]](&i, &coreData, &updateData, msec);
 			reduceCooldowns(&i, &coreData, msec);
 		#endif
@@ -526,21 +532,38 @@ void AIManager::update(float msec)
 					{
 						Renderer::GetRenderer().RemoveNode(playerNodes[i]->target);
 					}
-					//PhysicsSystem::GetPhysicsSystem().RemoveNode(playerNodes[i]);
 				}
 			}
 		}
 
 	}
 
-	//Broadphase(msec);
-
-	//cudaUpdateAgents(&coreData, &updateData, agentCount, partitionCount, msec);
-
-
-
-	cudaRunKernalBase(&coreData, &updateData, agentCount, partitionCount, msec, true);
+#if defined (BASICGPU)
+	cudaGPUBasic(&coreData, &updateData, agentCount, partitionCount, msec);
+#elif defined (LESS_DATA_GPU)
+	cudaGPUCopyOnce(&coreData, &updateData, agentCount, partitionCount, msec, false);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
+#elif defined (GPU_OLD_BROAD)
+	cudaGPUCopyOnce(&coreData, &updateData, agentCount, partitionCount, msec, true);
+	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
+#elif defined (GPU_NEW_BROAD)
+	cudaGPUBroad(&coreData, &updateData, agentCount, partitionCount, msec, true);
+	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
+#elif defined (GPU_BROAD_AGENTS)
+	cudaGPUBroadAgents(&coreData, &updateData, agentCount, partitionCount, msec, true);
+	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
+#elif defined (SPLIT_GPU)
+	cudaGPUSplit(&coreData, &updateData, agentCount, partitionCount, msec, false);
+	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
+#elif defined (SPLIT_GPU_BROAD)
+	cudaGPUSplit(&coreData, &updateData, agentCount, partitionCount, msec, true);
+	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
+#elif defined (DEBUG)
+	cudaRunKernalCPUSORT(&coreData, &updateData, agentCount, partitionCount, msec, true);
+	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
+#endif
+	//cudaRunKernalBase(&coreData, &updateData, agentCount, partitionCount, msec, true);
+	//copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
 	
 }
 
@@ -574,9 +597,13 @@ void AIManager::addAgent(PhysicsNode* a)
 
 	coreData.myAgents.targetLocation[agentCount] = 0;
 
-	coreData.myAgents.patrolLocation[agentCount][0] = GenerateTargetLocation(a->GetPosition());	// start patrol
-	coreData.myAgents.patrolLocation[agentCount][1] = GenerateTargetLocation(a->GetPosition());	// end patrol
-	coreData.myAgents.patrolLocation[agentCount][2] = Vector3(0, 0, 0);							// store location
+	//coreData.myAgents.patrolLocation[agentCount][0] = GenerateTargetLocation(a->GetPosition());	// start patrol
+	//coreData.myAgents.patrolLocation[agentCount][1] = GenerateTargetLocation(a->GetPosition());	// end patrol
+	//coreData.myAgents.patrolLocation[agentCount][2] = Vector3(0, 0, 0);							// store location
+
+	coreData.myAgents.patrolLocation[agentCount][0] = Vector3(0, 0, 0);	// start patrol
+	coreData.myAgents.patrolLocation[agentCount][1] = Vector3(1, 1, 1);	// end patrol
+	coreData.myAgents.patrolLocation[agentCount][2] = Vector3(2, 2, 2);	// store location
 
 	coreData.myAgents.targetPlayer[agentCount] = -1; // no target player
 
@@ -605,9 +632,9 @@ void AIManager::addPlayer(PhysicsNode* p)
 {
 	coreData.myPlayers.level[playerCount] = 100; //(rand() % 100) + 1; // randomly generate level
 
-	coreData.myPlayers.hp[playerCount] = 20000; //set hp
+	coreData.myPlayers.hp[playerCount] = 2000; //set hp
 
-	coreData.myPlayers.maxHP[playerCount] = 20000; //set the max hp
+	coreData.myPlayers.maxHP[playerCount] = 2000; //set the max hp
 
 	updateData.playerIsDead[playerCount] = false; // make the player alive
 

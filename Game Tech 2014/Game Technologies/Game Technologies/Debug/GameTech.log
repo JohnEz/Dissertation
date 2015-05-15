@@ -1,20 +1,58 @@
-﻿Build started 13/05/2015 18:32:01.
+﻿Build started 15/05/2015 16:00:50.
      1>Project "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\GameTech.vcxproj" on node 2 (Build target(s)).
        Project file contains ToolsVersion="12.0". This toolset may be unknown or missing, in which case you may be able to resolve this by installing the appropriate version of MSBuild, or the build may have been forced to a particular ToolsVersion for policy reasons. Treating the project as if it had ToolsVersion="4.0". For more information, please see http://go.microsoft.com/fwlink/?LinkId=291333.
      1>AddCudaCompileDeps:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D_MBCS /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\bin" /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /I. /FIcuda_runtime.h /c "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\kernal.cu" 
        CudaBuild:
          Compiling CUDA source file kernal.cu...
-         cmd.exe /C "C:\Users\B1030516\AppData\Local\Temp\tmp085693e971ee4330b0f279a2b61c0704.cmd"
+         cmd.exe /C "C:\Users\B1030516\AppData\Local\Temp\tmpa03cbac2e0d64edc9e8c9ca528135992.cmd"
          "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\bin\nvcc.exe" -gencode=arch=compute_20,code=\"sm_20,compute_20\" --use-local-env --cl-version 2012 -ccbin "C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin"  -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include"  -G   --keep-dir Debug -maxrregcount=0  --machine 32 --compile -cudart static  -g   -D_MBCS -Xcompiler "/EHsc /W3 /nologo /Od /Zi /RTC1 /MDd  " -o Debug\kernal.cu.obj "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\kernal.cu"
          
          D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\bin\nvcc.exe" -gencode=arch=compute_20,code=\"sm_20,compute_20\" --use-local-env --cl-version 2012 -ccbin "C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin"  -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include"  -G   --keep-dir Debug -maxrregcount=0  --machine 32 --compile -cudart static  -g   -D_MBCS -Xcompiler "/EHsc /W3 /nologo /Od /Zi /RTC1 /MDd  " -o Debug\kernal.cu.obj "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\kernal.cu" 
      1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(722): warning : variable "count" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(2257): warning : variable "d_index" was declared but never referenced
+     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(3009): warning : variable "d_index" was declared but never referenced
      1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(722): warning : variable "count" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(2257): warning : variable "d_index" was declared but never referenced
+     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(3009): warning : variable "d_index" was declared but never referenced
          kernal.cu
-     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\kernal.cu(1980): warning C4700: uninitialized local variable 'index' used
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /ZI /nologo /W3 /WX- /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt AIManager.cpp Main.cpp MyGame.cpp PhysicsSystem.cpp
+         MyGame.cpp
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\mygame.cpp(59): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\mygame.cpp(61): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\mygame.cpp(63): warning C4244: 'argument' : conversion from 'int' to 'const float', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\mygame.cpp(71): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\mygame.cpp(73): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\mygame.cpp(74): warning C4244: 'argument' : conversion from 'int' to 'const float', possible loss of data
+         Generating Code...
+         Compiling...
+         PhysicsSystem.cpp
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicssystem.cpp(97): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicssystem.cpp(99): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicssystem.cpp(140): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicssystem.cpp(141): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicssystem.cpp(153): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicssystem.cpp(191): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicssystem.cpp(226): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicssystem.cpp(248): warning C4244: 'argument' : conversion from 'float' to 'int', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicssystem.cpp(264): warning C4018: '<' : signed/unsigned mismatch
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\physicssystem.cpp(276): warning C4018: '<' : signed/unsigned mismatch
+         Main.cpp
+     1>c:\program files\nvidia gpu computing toolkit\cuda\v6.5\include\thrust\detail\allocator\allocator_traits.inl(180): warning C4003: not enough actual parameters for macro 'max'
+     1>c:\program files\nvidia gpu computing toolkit\cuda\v6.5\include\thrust\system\detail\error_category.inl(102): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 11.0\vc\include\string.h(164) : see declaration of 'strerror'
+     1>c:\program files\nvidia gpu computing toolkit\cuda\v6.5\include\thrust\system\cuda\detail\for_each.inl(112): warning C4003: not enough actual parameters for macro 'max'
+         AIManager.cpp
+     1>c:\program files\nvidia gpu computing toolkit\cuda\v6.5\include\thrust\detail\allocator\allocator_traits.inl(180): warning C4003: not enough actual parameters for macro 'max'
+     1>c:\program files\nvidia gpu computing toolkit\cuda\v6.5\include\thrust\system\detail\error_category.inl(102): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 11.0\vc\include\string.h(164) : see declaration of 'strerror'
+     1>c:\program files\nvidia gpu computing toolkit\cuda\v6.5\include\thrust\system\cuda\detail\for_each.inl(112): warning C4003: not enough actual parameters for macro 'max'
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\aimanager.cpp(188): warning C4244: 'initializing' : conversion from 'int' to 'float', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\aimanager.cpp(319): warning C4244: '=' : conversion from 'int' to 'float', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\aimanager.cpp(388): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\aimanager.cpp(393): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\aimanager.cpp(398): warning C4244: '=' : conversion from 'float' to 'int', possible loss of data
+     1>d:\storage\work\dissertation\dissertation\game tech 2014\game technologies\game technologies\aimanager.cpp(449): warning C4244: 'argument' : conversion from 'const int' to 'float', possible loss of data
+         Generating Code...
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\GameTech.exe" /INCREMENTAL /NOLOGO /LIBPATH:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\lib\Win32" cudart.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\GameTech.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\GameTech.lib" /MACHINE:X86 Debug\kernal.cu.obj
          Debug\AIManager.obj
@@ -57,4 +95,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:10.34
+Time Elapsed 00:00:15.35

@@ -895,6 +895,9 @@ __global__ void cudaBroadphaseAgents2(CopyOnce* coreData, CopyEachFrame* updateD
 	int part = t % partitionCount;
 	int a = t / partitionCount;
 
+	if (part == 0) coreData->myAgents.partCount[a] = 0;
+	__syncthreads();
+
 	float3 agentPos = float3();
 	agentPos.x = coreData->myAgents.x[a];
 	agentPos.y = coreData->myAgents.y[a];
@@ -905,9 +908,6 @@ __global__ void cudaBroadphaseAgents2(CopyOnce* coreData, CopyEachFrame* updateD
 	halfDim.x = coreData->myPartitions.halfDim.x;
 	halfDim.y = coreData->myPartitions.halfDim.y;
 	halfDim.z = coreData->myPartitions.halfDim.z;
-
-	if (part == 0) coreData->myAgents.partCount[a] = 0;
-	__syncthreads();
 
 	//position of this partition
 	float3 pos = float3();
@@ -1119,7 +1119,810 @@ __global__ void SortPatrolData(CopyOnce* coreData, short* agentsPartitions, int*
 	}
 }
 
-cudaError_t cudaUpdateAgents(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec)
+cudaError_t cudaCopyCore(CopyOnce* coreData)
+{
+	cudaError_t cudaStatus;
+
+	//COPY DATA TO THE GPU
+	//////////////////////
+
+	// Choose which GPU to run on, change this on a multi-GPU system.
+	cudaStatus = cudaSetDevice(0);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
+		return cudaStatus;
+	}
+
+	// Allocate GPU buffers for the data
+	// CoreData
+	cudaStatus = cudaMalloc((void**)&AIManager::GetInstance()->d_coreData, sizeof(CopyOnce));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		fprintf(stderr, cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+
+	// Copy data to the gpu.
+	cudaStatus = cudaMemcpy(AIManager::GetInstance()->d_coreData, coreData, sizeof(CopyOnce), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	return cudaStatus;
+}
+
+cudaError_t cudaGPUBasic(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec)
+{
+	//COPY DATA TO THE GPU
+	//////////////////////
+
+	CopyOnce* d_coreData = 0;
+	CopyEachFrame* d_updateData = 0;
+	short* d_agentPartitions = 0;
+	short* d_partitionPlayers = 0;
+	cudaError_t cudaStatus;
+	int blockSize;      // The launch configurator returned block size 
+	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
+	int gridSize;       // The actual grid size needed, based on input size 
+
+
+	// Choose which GPU to run on, change this on a multi-GPU system.
+	cudaStatus = cudaSetDevice(0);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
+		goto Error;
+	}
+
+	// Allocate GPU buffers for the data
+	// Agents
+	cudaStatus = cudaMalloc((void**)&d_coreData, sizeof(CopyOnce));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
+
+	// Players
+	cudaStatus = cudaMalloc((void**)&d_updateData, sizeof(CopyEachFrame));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
+
+	// copy pointers from structs (urgh)
+	cudaStatus = cudaMalloc((void**)&d_agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
+
+	cudaStatus = cudaMalloc((void**)&d_partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		goto Error;
+	}
+
+
+
+	// Copy input vectors from host memory to GPU buffers.
+	cudaStatus = cudaMemcpy(d_coreData, coreData, sizeof(CopyOnce), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
+
+	cudaStatus = cudaMemcpy(d_updateData, updateData, sizeof(CopyEachFrame), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
+
+	cudaStatus = cudaMemcpy(d_agentPartitions, updateData->agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
+
+	cudaStatus = cudaMemcpy(d_partitionPlayers, updateData->partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		goto Error;
+	}
+
+	//RUN THE KERNALS ON THE GPU
+	////////////////////////////
+
+	//get the mingrid and blocksize
+	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSM, 0, agentCount);
+
+	// Round up according to array size 
+	gridSize = (agentCount + blockSize - 1) / blockSize;
+
+	// Launch a kernel on the GPU with one thread for each element.
+	cudaFSM<<<gridSize, blockSize>>>(d_coreData, d_updateData, d_agentPartitions, d_partitionPlayers, msec);
+
+	// Check for any errors launching the kernel
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+		goto Error;
+	}
+
+	// cudaDeviceSynchronize waits for the kernel to finish, and returns
+	// any errors encountered during the launch.
+	cudaStatus = cudaDeviceSynchronize();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+		goto Error;
+	}
+
+
+	//COPY THE DATA BACK OFF OF THE GPU
+	///////////////////////////////////
+
+	// Copy output vector from GPU buffer to host memory.
+	cudaStatus = cudaMemcpy(coreData, d_coreData, sizeof(CopyOnce), cudaMemcpyDeviceToHost);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed CoreData!");
+		goto Error;
+	}
+
+	cudaStatus = cudaMemcpy(updateData, d_updateData, sizeof(CopyEachFrame), cudaMemcpyDeviceToHost);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed UpdateData!");
+		goto Error;
+	}
+
+
+Error:
+	cudaFree(d_coreData);
+	cudaFree(d_updateData);
+	cudaFree(d_agentPartitions);
+	cudaFree(d_partitionPlayers);
+
+	return cudaStatus;
+}
+
+cudaError_t cudaGPUCopyOnce(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad)
+{
+	AIManager::GetInstance()->d_updateData = 0;
+	short* d_agentPartitions = 0;
+	short* d_partitionPlayers = 0;
+	cudaError_t cudaStatus;
+	int blockSize;      // The launch configurator returned block size 
+	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
+	int gridSize;       // The actual grid size needed, based on input size
+
+	//COPY THE NEW DATA TO THE GPU
+	//////////////////////////////
+
+	// Update Data
+	cudaStatus = cudaMalloc((void**)&AIManager::GetInstance()->d_updateData, sizeof(CopyEachFrame));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	// Pointer Data
+	cudaStatus = cudaMalloc((void**)&d_agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	// Pointer Data
+	cudaStatus = cudaMalloc((void**)&d_partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+
+	//Pass pointers their data
+	//Update Data
+	cudaStatus = cudaMemcpy(AIManager::GetInstance()->d_updateData, updateData, sizeof(CopyEachFrame), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//Agent's Partitions
+	cudaStatus = cudaMemcpy(d_agentPartitions, updateData->agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//Partition's Players
+	cudaStatus = cudaMemcpy(d_partitionPlayers, updateData->partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//RUN THE KERNALS ON THE GPU
+	////////////////////////////
+
+	//run the broadphase on the gpu
+	if (runBroad)
+	{
+		//BROADPHASE FOR PLAYERS
+		////////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphasePlayers, 0, partitionCount);
+
+		// Round up according to array size 
+		gridSize = (partitionCount + blockSize - 1) / blockSize;
+
+		cudaBroadphasePlayers<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_partitionPlayers);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "1st cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		//BROADPHASE FOR AGENTS
+		///////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount);
+
+		// Round up according to array size 
+		gridSize = (agentCount + blockSize - 1) / blockSize;
+
+		cudaBroadphaseAgents<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, partitionCount);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "2nd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+	}
+
+	//get the mingrid and blocksize
+	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSM, 0, agentCount);
+
+	// Round up according to array size 
+	gridSize = (agentCount + blockSize - 1) / blockSize;
+
+	// Launch a kernel on the GPU with one thread for each element.
+	cudaFSM<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
+
+	// Check for any errors launching the kernel
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+	// cudaDeviceSynchronize waits for the kernel to finish, and returns
+	// any errors encountered during the launch.
+	cudaStatus = cudaDeviceSynchronize();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "3rd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+		fprintf(stderr, cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+	//clear partition data as we dont need to copy it back //POTENTIAL PROBLEM HERE
+	cudaFree(d_agentPartitions);
+	cudaFree(d_partitionPlayers);
+
+	return cudaStatus;
+}
+
+cudaError_t cudaGPUBroad(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad)
+{
+	AIManager::GetInstance()->d_updateData = 0;
+	short* d_agentPartitions = 0;
+	short* d_partitionPlayers = 0;
+
+	cudaError_t cudaStatus;
+	int blockSize;      // The launch configurator returned block size 
+	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
+	int gridSize;       // The actual grid size needed, based on input size
+
+	//COPY THE NEW DATA TO THE GPU
+	//////////////////////////////
+
+	// Update Data
+	cudaStatus = cudaMalloc((void**)&AIManager::GetInstance()->d_updateData, sizeof(CopyEachFrame));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	// Pointer Data
+	cudaStatus = cudaMalloc((void**)&d_agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	// Pointer Data
+	cudaStatus = cudaMalloc((void**)&d_partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	//Pass pointers their data
+
+	//Update Data
+	cudaStatus = cudaMemcpy(AIManager::GetInstance()->d_updateData, updateData, sizeof(CopyEachFrame), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//Agent's Partitions
+	cudaStatus = cudaMemcpy(d_agentPartitions, updateData->agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//Partition's Players
+	cudaStatus = cudaMemcpy(d_partitionPlayers, updateData->partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+
+	//run the broadphase on the gpu
+	if (runBroad)
+	{
+		//BROADPHASE FOR PLAYERS
+		////////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphasePlayers2, 0, partitionCount*coreData->myPlayers.MAXPLAYERS);
+
+		// Round up according to array size 
+		gridSize = (partitionCount*coreData->myPlayers.MAXPLAYERS + blockSize - 1) / blockSize;
+
+		cudaBroadphasePlayers2<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_partitionPlayers, partitionCount);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "1st cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		//BROADPHASE FOR AGENTS
+		///////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount);
+
+		// Round up according to array size 
+		//gridSize = (agentCount*partitionCount + blockSize - 1) / blockSize;
+		gridSize = (agentCount + blockSize - 1) / blockSize;
+
+		cudaBroadphaseAgents<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, partitionCount);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "2nd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+	}
+
+	//get the mingrid and blocksize
+	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSM, 0, agentCount);
+
+	// Round up according to array size 
+	gridSize = (agentCount + blockSize - 1) / blockSize;
+
+	// Launch a kernel on the GPU with one thread for each element.
+	cudaFSM<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
+
+	// Check for any errors launching the kernel
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+	// cudaDeviceSynchronize waits for the kernel to finish, and returns
+	// any errors encountered during the launch.
+	cudaStatus = cudaDeviceSynchronize();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "3rd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+		fprintf(stderr, cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+	//clear partition data as we dont need to copy it back 
+	cudaFree(d_agentPartitions);
+	cudaFree(d_partitionPlayers);
+
+	return cudaStatus;
+}
+
+cudaError_t cudaGPUBroadAgents(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad)
+{
+	AIManager::GetInstance()->d_updateData = 0;
+	short* d_agentPartitions = 0;
+	short* d_partitionPlayers = 0;
+
+	cudaError_t cudaStatus;
+	int blockSize;      // The launch configurator returned block size 
+	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
+	int gridSize;       // The actual grid size needed, based on input size
+
+	//COPY THE NEW DATA TO THE GPU
+	//////////////////////////////
+
+	// Update Data
+	cudaStatus = cudaMalloc((void**)&AIManager::GetInstance()->d_updateData, sizeof(CopyEachFrame));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	// Pointer Data
+	cudaStatus = cudaMalloc((void**)&d_agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	// Pointer Data
+	cudaStatus = cudaMalloc((void**)&d_partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	//Pass pointers their data
+
+	//Update Data
+	cudaStatus = cudaMemcpy(AIManager::GetInstance()->d_updateData, updateData, sizeof(CopyEachFrame), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//Agent's Partitions
+	cudaStatus = cudaMemcpy(d_agentPartitions, updateData->agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//Partition's Players
+	cudaStatus = cudaMemcpy(d_partitionPlayers, updateData->partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+
+	//run the broadphase on the gpu
+	if (runBroad)
+	{
+		//BROADPHASE FOR PLAYERS
+		////////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphasePlayers2, 0, partitionCount*coreData->myPlayers.MAXPLAYERS);
+
+		// Round up according to array size 
+		gridSize = (partitionCount*coreData->myPlayers.MAXPLAYERS + blockSize - 1) / blockSize;
+
+		cudaBroadphasePlayers2<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_partitionPlayers, partitionCount);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "1st cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		//BROADPHASE FOR AGENTS
+		///////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, partitionCount*agentCount);
+
+		// Round up according to array size 
+		//gridSize = (agentCount*partitionCount + blockSize - 1) / blockSize;
+		gridSize = (partitionCount*agentCount + blockSize - 1) / blockSize;
+
+		cudaBroadphaseAgents2<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, partitionCount);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "2nd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+	}
+
+	//get the mingrid and blocksize
+	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSM, 0, agentCount);
+
+	// Round up according to array size 
+	gridSize = (agentCount + blockSize - 1) / blockSize;
+
+	// Launch a kernel on the GPU with one thread for each element.
+	cudaFSM<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
+
+	// Check for any errors launching the kernel
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+	// cudaDeviceSynchronize waits for the kernel to finish, and returns
+	// any errors encountered during the launch.
+	cudaStatus = cudaDeviceSynchronize();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "3rd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+		fprintf(stderr, cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+	//clear partition data as we dont need to copy it back 
+	cudaFree(d_agentPartitions);
+	cudaFree(d_partitionPlayers);
+
+	return cudaStatus;
+}
+
+cudaError_t cudaGPUSplit(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad)
+{
+	AIManager::GetInstance()->d_updateData = 0;
+	short* d_agentPartitions = 0;
+	short* d_partitionPlayers = 0;
+
+	cudaError_t cudaStatus;
+	int blockSize;      // The launch configurator returned block size 
+	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
+	int gridSize;       // The actual grid size needed, based on input size
+
+	//COPY THE NEW DATA TO THE GPU
+	//////////////////////////////
+
+	// Update Data
+	cudaStatus = cudaMalloc((void**)&AIManager::GetInstance()->d_updateData, sizeof(CopyEachFrame));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	// Pointer Data
+	cudaStatus = cudaMalloc((void**)&d_agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	// Pointer Data
+	cudaStatus = cudaMalloc((void**)&d_partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short));
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMalloc failed!");
+		return cudaStatus;
+	}
+
+	//Pass pointers their data
+
+	//Update Data
+	cudaStatus = cudaMemcpy(AIManager::GetInstance()->d_updateData, updateData, sizeof(CopyEachFrame), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//Agent's Partitions
+	cudaStatus = cudaMemcpy(d_agentPartitions, updateData->agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+	//Partition's Players
+	cudaStatus = cudaMemcpy(d_partitionPlayers, updateData->partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short), cudaMemcpyHostToDevice);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!");
+		return cudaStatus;
+	}
+
+
+	//run the broadphase on the gpu
+	if (runBroad)
+	{
+		//BROADPHASE FOR PLAYERS
+		////////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphasePlayers2, 0, partitionCount*coreData->myPlayers.MAXPLAYERS);
+
+		// Round up according to array size 
+		gridSize = (partitionCount*coreData->myPlayers.MAXPLAYERS + blockSize - 1) / blockSize;
+
+		cudaBroadphasePlayers2<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_partitionPlayers, partitionCount);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "1st cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		//BROADPHASE FOR AGENTS
+		///////////////////////
+
+		//get the mingrid and blocksize
+		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount);
+
+		// Round up according to array size 
+		//gridSize = (agentCount*partitionCount + blockSize - 1) / blockSize;
+		gridSize = (agentCount + blockSize - 1) / blockSize;
+
+		cudaBroadphaseAgents<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, partitionCount);
+
+		// Check for any errors launching the kernel
+		cudaStatus = cudaGetLastError();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+		// cudaDeviceSynchronize waits for the kernel to finish, and returns
+		// any errors encountered during the launch.
+		cudaStatus = cudaDeviceSynchronize();
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "2nd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+			fprintf(stderr, cudaGetErrorString(cudaStatus));
+			return cudaStatus;
+		}
+
+	}
+
+	//get the mingrid and blocksize
+	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSMSplit, 0, agentCount);
+
+	// Round up according to array size 
+	gridSize = (agentCount + blockSize - 1) / blockSize;
+
+	// Launch a kernel on the GPU with one thread for each element.
+	cudaFSMSplit<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
+
+	// Check for any errors launching the kernel
+	cudaStatus = cudaGetLastError();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+	// cudaDeviceSynchronize waits for the kernel to finish, and returns
+	// any errors encountered during the launch.
+	cudaStatus = cudaDeviceSynchronize();
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "3rd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
+		fprintf(stderr, cudaGetErrorString(cudaStatus));
+		return cudaStatus;
+	}
+
+	//clear partition data as we dont need to copy it back 
+	cudaFree(d_agentPartitions);
+	cudaFree(d_partitionPlayers);
+
+	return cudaStatus;
+}
+
+void clearCoreData()
+{
+	cudaFree(AIManager::GetInstance()->d_coreData);
+}
+
+cudaError_t copyDataFromGPU(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec)
+{
+	cudaError_t cudaStatus;
+
+
+
+	//COPY THE DATA BACK OFF OF THE GPU
+	///////////////////////////////////
+
+	// Copy output vector from GPU buffer to host memory.
+	cudaStatus = cudaMemcpy(coreData, AIManager::GetInstance()->d_coreData, sizeof(CopyOnce), cudaMemcpyDeviceToHost);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed CoreData!");
+		return cudaStatus;
+	}
+
+	cudaStatus = cudaMemcpy(updateData, AIManager::GetInstance()->d_updateData, sizeof(CopyEachFrame), cudaMemcpyDeviceToHost);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed UpdateData!");
+		return cudaStatus;
+	}
+
+	//clear updateData so we can send it again
+	cudaFree(AIManager::GetInstance()->d_updateData);
+
+	return cudaStatus;
+}
+
+
+
+cudaError_t cudaBasicGPU2(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec)
 {
 	//COPY DATA TO THE GPU
 	//////////////////////
@@ -1282,40 +2085,6 @@ Error:
 	cudaFree(d_updateData);
 	cudaFree(d_agentPartitions);
 	cudaFree(d_partitionPlayers);
-
-	return cudaStatus;
-}
-
-cudaError_t cudaCopyCore(CopyOnce* coreData)
-{
-	cudaError_t cudaStatus;
-
-	//COPY DATA TO THE GPU
-	//////////////////////
-
-	// Choose which GPU to run on, change this on a multi-GPU system.
-	cudaStatus = cudaSetDevice(0);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?");
-		return cudaStatus;
-	}
-
-	// Allocate GPU buffers for the data
-	// CoreData
-	cudaStatus = cudaMalloc((void**)&AIManager::GetInstance()->d_coreData, sizeof(CopyOnce));
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed!");
-		fprintf(stderr, cudaGetErrorString(cudaStatus));
-		return cudaStatus;
-	}
-
-
-	// Copy data to the gpu.
-	cudaStatus = cudaMemcpy(AIManager::GetInstance()->d_coreData, coreData, sizeof(CopyOnce), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		return cudaStatus;
-	}
 
 	return cudaStatus;
 }
@@ -1531,20 +2300,6 @@ cudaError_t cudaRunKernalDEBUG(CopyOnce* coreData, CopyEachFrame* updateData, co
 		return cudaStatus;
 	}
 
-	//temp
-	//short* agentPartitions = 0;
-
-	cudaStatus = cudaMemcpy(updateData->agentPartitions, d_agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed part!");
-		return cudaStatus;
-	}
-
-	for (int i = 0; i < 88; ++i)
-	{
-		fprintf(stderr, "%d \n", updateData->agentPartitions[i]);
-	}
-
 	//run the broadphase on the gpu
 	if (runBroad)
 	{
@@ -1718,7 +2473,7 @@ cudaError_t cudaRunKernalDEBUG(CopyOnce* coreData, CopyEachFrame* updateData, co
 		index[i] = i;
 	}
 
-	//thrust::sort_by_key(coreData->myAgents.state, coreData->myAgents.state + agentCount, index);
+	thrust::sort_by_key(coreData->myAgents.state, coreData->myAgents.state + agentCount, index);
 	cudaStatus = cudaDeviceSynchronize();
 
 	//COPY THE NEW DATA TO THE GPU
@@ -1739,14 +2494,14 @@ cudaError_t cudaRunKernalDEBUG(CopyOnce* coreData, CopyEachFrame* updateData, co
 	}
 
 	//get the mingrid and blocksize
-	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, SortData, 0, agentCount);
+	//cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, SortData, 0, agentCount);
 
 	// Round up according to array size 
-	gridSize = (agentCount + blockSize - 1) / blockSize;
+	//gridSize = (agentCount + blockSize - 1) / blockSize;
 
 	//SortData<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, d_agentPartitions, d_index);
 
-	SortPatrolData<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, d_agentPartitions, d_index);
+	//SortPatrolData<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, d_agentPartitions, d_index);
 
 	// Check for any errors launching the kernel
 	cudaStatus = cudaGetLastError();
@@ -1789,39 +2544,6 @@ cudaError_t cudaRunKernalDEBUG(CopyOnce* coreData, CopyEachFrame* updateData, co
 	cudaFree(d_partitionPlayers);
 
 	return cudaStatus;
-}
-
-cudaError_t copyDataFromGPU(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec)
-{
-	cudaError_t cudaStatus;
-
-
-
-	//COPY THE DATA BACK OFF OF THE GPU
-	///////////////////////////////////
-
-	// Copy output vector from GPU buffer to host memory.
-	cudaStatus = cudaMemcpy(coreData, AIManager::GetInstance()->d_coreData, sizeof(CopyOnce), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed CoreData!");
-		return cudaStatus;
-	}
-
-	cudaStatus = cudaMemcpy(updateData, AIManager::GetInstance()->d_updateData, sizeof(CopyEachFrame), cudaMemcpyDeviceToHost);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed UpdateData!");
-		return cudaStatus;
-	}
-
-	//clear updateData so we can send it again
-	cudaFree(AIManager::GetInstance()->d_updateData);
-
-	return cudaStatus;
-}
-
-void clearCoreData()
-{
-	cudaFree(AIManager::GetInstance()->d_coreData);
 }
 
 cudaError_t cudaRunKernalCPUSORT(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad)
@@ -1944,13 +2666,13 @@ cudaError_t cudaRunKernalCPUSORT(CopyOnce* coreData, CopyEachFrame* updateData, 
 	}
 
 	//get the mingrid and blocksize
-	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSMSplit, 0, agentCount);
+	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSM, 0, agentCount);
 
 	// Round up according to array size 
 	gridSize = (agentCount + blockSize - 1) / blockSize;
 
 	// Launch a kernel on the GPU with one thread for each element.
-	cudaFSMSplit<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
+	cudaFSM<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
 
 
 	// Check for any errors launching the kernel
@@ -1980,24 +2702,45 @@ cudaError_t cudaRunKernalCPUSORT(CopyOnce* coreData, CopyEachFrame* updateData, 
 		index[i] = i;
 	}
 
-	float x[coreData->myAgents.MAXAGENTS];
+	int		iStore[coreData->myAgents.MAXAGENTS];
+	float	fStore[coreData->myAgents.MAXAGENTS];
+	Ability (*aStore)[3] = coreData->myAgents.myAbilities;
+	Vector3 (*vStore)[3] = coreData->myAgents.patrolLocation;
 
-	thrust::device_vector<int> d_ind(index, index + agentCount);
-	thrust::device_vector<State> d_state(coreData->myAgents.state, coreData->myAgents.state + agentCount);
-	thrust::device_vector<float> d_x(coreData->myAgents.x, coreData->myAgents.x + agentCount), 
-								st_x(x, x + coreData->myAgents.MAXAGENTS);
 
-	thrust::sort_by_key(d_state.begin(), d_state.end(), d_ind.begin());
+
+	thrust::stable_sort_by_key(coreData->myAgents.state, coreData->myAgents.state + agentCount, index);
 	cudaStatus = cudaDeviceSynchronize();
 
-	//thrust::scatter(d_x.begin(), d_x.end(), d_ind.begin(), coreData->myAgents.x[0]);
+	thrust::gather(index, index + agentCount, coreData->myAgents.x, fStore);
+	thrust::copy(fStore, fStore + agentCount, coreData->myAgents.x);
 
-	//coreData->myAgents.x = st_x;
+	thrust::gather(index, index + agentCount, coreData->myAgents.y, fStore);
+	thrust::copy(fStore, fStore + agentCount, coreData->myAgents.y);
 
-	/*for (int i = 0; i < coreData->myAgents.MAXAGENTS; ++i)
-	{
-		coreData->myAgents.x[i] = st_x[i];
-	}*/
+	thrust::gather(index, index + agentCount, coreData->myAgents.z, fStore);
+	thrust::copy(fStore, fStore + agentCount, coreData->myAgents.z);
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.level, iStore);
+	thrust::copy(iStore, iStore + agentCount, coreData->myAgents.level);
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.targetLocation, iStore);
+	thrust::copy(iStore, iStore + agentCount, coreData->myAgents.targetLocation);
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.targetPlayer, iStore);
+	thrust::copy(iStore, iStore + agentCount, coreData->myAgents.targetPlayer);
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.waitedTime, fStore);
+	thrust::copy(fStore, fStore + agentCount, coreData->myAgents.waitedTime);
+
+	//thrust::gather(index, index + agentCount, *coreData->myAgents.myAbilities, *aStore);
+	//thrust::copy(*aStore, *aStore + agentCount, *coreData->myAgents.myAbilities);
+
+	thrust::gather(index, index + agentCount, coreData->myAgents.patrolLocation[0], vStore[0]);
+	thrust::copy(*vStore, *vStore + agentCount, *coreData->myAgents.patrolLocation);
+
+	cudaStatus = cudaDeviceSynchronize();
+
 
 	cudaStatus = cudaMemcpy(coreData->myAgents.stateCount, AIManager::GetInstance()->d_coreData->myAgents.stateCount, MAX_STATES * sizeof(int), cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
@@ -2413,154 +3156,3 @@ cudaError_t cudaRunKernalCleanWoSort(CopyOnce* coreData, CopyEachFrame* updateDa
 	return cudaStatus;
 }
 
-cudaError_t cudaRunKernalBase(CopyOnce* coreData, CopyEachFrame* updateData, const unsigned int agentCount, const unsigned int partitionCount, float msec, bool runBroad)
-{
-	AIManager::GetInstance()->d_updateData = 0;
-	short* d_agentPartitions = 0;
-	short* d_partitionPlayers = 0;
-
-	cudaError_t cudaStatus;
-	int blockSize;      // The launch configurator returned block size 
-	int minGridSize;    // The minimum grid size needed to achieve the maximum occupancy for a full device launch 
-	int gridSize;       // The actual grid size needed, based on input size
-
-	//COPY THE NEW DATA TO THE GPU
-	//////////////////////////////
-
-	// Update Data
-	cudaStatus = cudaMalloc((void**)&AIManager::GetInstance()->d_updateData, sizeof(CopyEachFrame));
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed!");
-		return cudaStatus;
-	}
-
-	// Pointer Data
-	cudaStatus = cudaMalloc((void**)&d_agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short));
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed!");
-		return cudaStatus;
-	}
-
-	// Pointer Data
-	cudaStatus = cudaMalloc((void**)&d_partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short));
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMalloc failed!");
-		return cudaStatus;
-	}
-
-	//Pass pointers their data
-
-	//Update Data
-	cudaStatus = cudaMemcpy(AIManager::GetInstance()->d_updateData, updateData, sizeof(CopyEachFrame), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		return cudaStatus;
-	}
-
-	//Agent's Partitions
-	cudaStatus = cudaMemcpy(d_agentPartitions, updateData->agentPartitions, (coreData->myAgents.MAXAGENTS*8) * sizeof(short), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		return cudaStatus;
-	}
-
-	//Partition's Players
-	cudaStatus = cudaMemcpy(d_partitionPlayers, updateData->partitionPlayers, (coreData->myPartitions.MAXPARTITIONS*coreData->myPlayers.MAXPLAYERS) * sizeof(short), cudaMemcpyHostToDevice);
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaMemcpy failed!");
-		return cudaStatus;
-	}
-
-
-	//run the broadphase on the gpu
-	if (runBroad)
-	{
-		//BROADPHASE FOR PLAYERS
-		////////////////////////
-
-		//get the mingrid and blocksize
-		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphasePlayers2, 0, partitionCount*coreData->myPlayers.MAXPLAYERS);
-
-		// Round up according to array size 
-		gridSize = (partitionCount*coreData->myPlayers.MAXPLAYERS + blockSize - 1) / blockSize;
-
-		cudaBroadphasePlayers2<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_partitionPlayers, partitionCount);
-
-		// Check for any errors launching the kernel
-		cudaStatus = cudaGetLastError();
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-			return cudaStatus;
-		}
-
-		// cudaDeviceSynchronize waits for the kernel to finish, and returns
-		// any errors encountered during the launch.
-		cudaStatus = cudaDeviceSynchronize();
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "1st cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-			fprintf(stderr, cudaGetErrorString(cudaStatus));
-			return cudaStatus;
-		}
-
-		//BROADPHASE FOR AGENTS
-		///////////////////////
-
-		//get the mingrid and blocksize
-		//cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount*partitionCount);
-		cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaBroadphaseAgents, 0, agentCount);
-
-		// Round up according to array size 
-		//gridSize = (agentCount*partitionCount + blockSize - 1) / blockSize;
-		gridSize = (agentCount + blockSize - 1) / blockSize;
-
-		cudaBroadphaseAgents<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, partitionCount);
-
-		// Check for any errors launching the kernel
-		cudaStatus = cudaGetLastError();
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-			return cudaStatus;
-		}
-
-		// cudaDeviceSynchronize waits for the kernel to finish, and returns
-		// any errors encountered during the launch.
-		cudaStatus = cudaDeviceSynchronize();
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "2nd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-			fprintf(stderr, cudaGetErrorString(cudaStatus));
-			return cudaStatus;
-		}
-
-	}
-
-	//get the mingrid and blocksize
-	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaFSM, 0, agentCount);
-
-	// Round up according to array size 
-	gridSize = (agentCount + blockSize - 1) / blockSize;
-
-	// Launch a kernel on the GPU with one thread for each element.
-	cudaFSM<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, d_agentPartitions, d_partitionPlayers, msec);
-
-	// Check for any errors launching the kernel
-	cudaStatus = cudaGetLastError();
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
-		return cudaStatus;
-	}
-
-	// cudaDeviceSynchronize waits for the kernel to finish, and returns
-	// any errors encountered during the launch.
-	cudaStatus = cudaDeviceSynchronize();
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "3rd cudaDeviceSynchronize returned error code %d after launching addKernel!\n", cudaStatus);
-		fprintf(stderr, cudaGetErrorString(cudaStatus));
-		return cudaStatus;
-	}
-
-	//clear partition data as we dont need to copy it back 
-	cudaFree(d_agentPartitions);
-	cudaFree(d_partitionPlayers);
-
-	return cudaStatus;
-}

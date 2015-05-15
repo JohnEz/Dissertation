@@ -86,6 +86,8 @@ int main() {
 
 		game->UpdateRendering(msec);	//Update our renderer
 		game->UpdateGame(msec);		//Update our game logic
+
+		cout << "Matt is A Boss!!!!!!!!!!!!!!!!!" << endl;
 	}
 
 	running = false;

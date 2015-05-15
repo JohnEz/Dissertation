@@ -52,7 +52,7 @@ MyGame::MyGame()	{
 	//floor
 	allEntities.push_back(BuildQuadEntity(30000.0f));
 
-	for (int i = 0; i < 1024 * 640; ++i)
+	for (int i = 0; i < 1024 * 40; ++i)
 	{
 		int x, y, z;
 		
