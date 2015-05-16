@@ -1,0 +1,24 @@
+PROBLEMS
+adding new agents and players overhead
+Sorting
+
+
+TESTS AND GOOD TINGS FAM
+General gpu vs CPU performance
+Target data (5000-6000 players, 60,000 agents)
+max realistic agents
+
+broadphase gpu vs cpu
+broadphase improvement on players not better on agents 1.256ms and 305us
+
+
+implementation
+optermisation
+optermisation for parralelism
+
+basic cpu
+basic gpu (cpu broadphase)
+basic gpu (gpu broadphase unoptamised)
+basic gpu (gpu broadphase)
+basic gpu (split w/ broadphase)
+basic gpu (split w/e broadphase)

@@ -361,6 +361,8 @@ __device__ void cudaPatrolState(CopyOnce* coreData, CopyEachFrame* updateData, s
 
 	int mod = a < coreData->myAgents.stateCount[0]; // if this is a correct thread
 
+	a = a % coreData->myAgents.MAXAGENTS;
+
 	//at target
 	float diffX = coreData->myAgents.patrolLocation[a].loc[coreData->myAgents.targetLocation[a]].x - coreData->myAgents.x[a];
 	float diffZ = coreData->myAgents.patrolLocation[a].loc[coreData->myAgents.targetLocation[a]].z - coreData->myAgents.z[a];
@@ -396,6 +398,8 @@ __device__ void cudaPatrolTransitions(CopyOnce* coreData, CopyEachFrame* updateD
 	int a = (blockIdx.x * blockDim.x + threadIdx.x) + sCount;
 
 	int mod = a < coreData->myAgents.stateCount[0]; // if this is a correct thread
+
+	a = a % coreData->myAgents.MAXAGENTS;
 
 	//state transition
 	int i = 0;
@@ -444,6 +448,8 @@ __device__ void cudaStareAtPlayerState(CopyOnce* coreData, CopyEachFrame* update
 
 	int mod = a < sCount + coreData->myAgents.stateCount[1]; // if this is a correct thread
 
+	a = a % coreData->myAgents.MAXAGENTS;
+
 	coreData->myAgents.waitedTime[a] += msec * mod;
 }
 
@@ -454,6 +460,8 @@ __device__ void cudaStareAtPlayerTransitions(CopyOnce* coreData, CopyEachFrame* 
 	int p = coreData->myAgents.targetPlayer[a]; // target player
 
 	int mod = a < sCount + coreData->myAgents.stateCount[1]; // if this is a correct thread
+
+	a = a % coreData->myAgents.MAXAGENTS;
 
 	//calculate distance to player
 	float3 diff = float3();
@@ -533,6 +541,8 @@ __device__ void cudaChasePlayerState(CopyOnce* coreData, CopyEachFrame* updateDa
 
 	int mod = a < sCount + coreData->myAgents.stateCount[2]; // if this is a correct thread
 
+	a = a % coreData->myAgents.MAXAGENTS;
+
 	//calculate distance to player
 	float3 diff = float3();
 	diff.x = coreData->myPlayers.x[p] - coreData->myAgents.x[a];
@@ -567,6 +577,8 @@ __device__ void cudaChasePlayerTransitions(CopyOnce* coreData, CopyEachFrame* up
 
 	int mod = a < sCount + coreData->myAgents.stateCount[2]; // if this is a correct thread
 
+	a = a % coreData->myAgents.MAXAGENTS;
+
 	//calculate distance to leash spot
 	float3 diff = float3();
 	diff.x = coreData->myAgents.patrolLocation[a].loc[2].x - coreData->myAgents.x[a];
@@ -600,62 +612,15 @@ __device__ void cudaChasePlayerTransitions(CopyOnce* coreData, CopyEachFrame* up
 	}
 }
 
-__device__ void cudaLeashBackState(CopyOnce* coreData, CopyEachFrame* updateData, float msec, int sCount = 0)
-{
-	int a = blockIdx.x * blockDim.x + threadIdx.x + sCount;
-
-	float MAXSPEED = 0.5F;
-
-	int mod = a < sCount + coreData->myAgents.stateCount[3]; // if this is a correct thread
-
-	//calculate distance to leash spot
-	float diffX = coreData->myAgents.patrolLocation[a].loc[2].x - coreData->myAgents.x[a];
-	float diffZ = coreData->myAgents.patrolLocation[a].loc[2].z - coreData->myAgents.z[a];
-	float absX = abs(diffX);
-	float absZ = abs(diffZ);
-
-	//move to target
-	float dis = absX + absZ;
-	float moveX = ((absX / dis) * MAXSPEED) * msec;
-	float moveZ = ((absZ / dis) * MAXSPEED) * msec;
-
-	moveX = min(moveX, absX);
-	moveZ = min(moveZ, absZ);
-
-	//set new position
-	coreData->myAgents.x[a] += (moveX * ((float(0) < diffX) - (diffX < float(0)))) * mod;
-	coreData->myAgents.z[a] += (moveZ * ((float(0) < diffZ) - (diffZ < float(0)))) * mod;
-
-}
-
-__device__ void cudaLeashBackTransitions(CopyOnce* coreData, CopyEachFrame* updateData, float msec, int sCount = 0) {
-
-	int a = blockIdx.x * blockDim.x + threadIdx.x + sCount;
-
-	int mod = a < sCount + coreData->myAgents.stateCount[3]; // if this is a correct thread
-
-	//calculate distance to leash spot
-	float diffX = coreData->myAgents.patrolLocation[a].loc[2].x - coreData->myAgents.x[a];
-	float diffZ = coreData->myAgents.patrolLocation[a].loc[2].z - coreData->myAgents.z[a];
-	float absX = abs(diffX);
-	float absZ = abs(diffZ);
-
-	//check its close enough to the point
-	if (absX < 0.1f && absZ < 0.1f && mod)
-	{
-		//change back to patrol
-		coreData->myAgents.state[a] = PATROL;
-	}
-
-}
-
 __device__ void cudaUseAbilityState(CopyOnce* coreData, CopyEachFrame* updateData, float msec, int sCount = 0)
 {
-	int a = blockIdx.x * blockDim.x + threadIdx.x + sCount;
+	int a = (blockIdx.x * blockDim.x + threadIdx.x) + sCount;
 
 	int p = coreData->myAgents.targetPlayer[a];
 
-	int mod = a < sCount + coreData->myAgents.stateCount[4]; // if this is a correct thread
+	int mod = a < sCount + coreData->myAgents.stateCount[3]; // if this is a correct thread
+
+	a = a % coreData->myAgents.MAXAGENTS;
 
 	//look through abilities via priority until one is found not on cooldown
 	int i = 0;
@@ -676,7 +641,9 @@ __device__ void cudaUseAbilityTransitions(CopyOnce* coreData, CopyEachFrame* upd
 
 	int a = blockIdx.x * blockDim.x + threadIdx.x + sCount;
 
-	int mod = a < sCount + coreData->myAgents.stateCount[4]; // if this is a correct thread
+	int mod = a < sCount + coreData->myAgents.stateCount[3]; // if this is a correct thread
+
+	a = a % coreData->myAgents.MAXAGENTS;
 
 	float ATTACKRANGE = 75.0f;
 	int p = coreData->myAgents.targetPlayer[a];
@@ -702,6 +669,59 @@ __device__ void cudaUseAbilityTransitions(CopyOnce* coreData, CopyEachFrame* upd
 		{
 			coreData->myAgents.state[a] = CHASE_PLAYER;
 		}
+	}
+
+}
+
+__device__ void cudaLeashBackState(CopyOnce* coreData, CopyEachFrame* updateData, float msec, int sCount = 0)
+{
+	int a = blockIdx.x * blockDim.x + threadIdx.x + sCount;
+
+	float MAXSPEED = 0.5F;
+
+	int mod = a < sCount + coreData->myAgents.stateCount[4]; // if this is a correct thread
+
+	a = a % coreData->myAgents.MAXAGENTS;
+
+	//calculate distance to leash spot
+	float diffX = coreData->myAgents.patrolLocation[a].loc[2].x - coreData->myAgents.x[a];
+	float diffZ = coreData->myAgents.patrolLocation[a].loc[2].z - coreData->myAgents.z[a];
+	float absX = abs(diffX);
+	float absZ = abs(diffZ);
+
+	//move to target
+	float dis = absX + absZ;
+	float moveX = ((absX / dis) * MAXSPEED) * msec;
+	float moveZ = ((absZ / dis) * MAXSPEED) * msec;
+
+	moveX = min(moveX, absX);
+	moveZ = min(moveZ, absZ);
+
+	//set new position
+	coreData->myAgents.x[a] += (moveX * ((float(0) < diffX) - (diffX < float(0)))) * mod;
+	coreData->myAgents.z[a] += (moveZ * ((float(0) < diffZ) - (diffZ < float(0)))) * mod;
+
+}
+
+__device__ void cudaLeashBackTransitions(CopyOnce* coreData, CopyEachFrame* updateData, float msec, int sCount = 0) {
+
+	int a = blockIdx.x * blockDim.x + threadIdx.x + sCount;
+
+	int mod = a < sCount + coreData->myAgents.stateCount[4]; // if this is a correct thread
+
+	a = a % coreData->myAgents.MAXAGENTS;
+
+	//calculate distance to leash spot
+	float diffX = coreData->myAgents.patrolLocation[a].loc[2].x - coreData->myAgents.x[a];
+	float diffZ = coreData->myAgents.patrolLocation[a].loc[2].z - coreData->myAgents.z[a];
+	float absX = abs(diffX);
+	float absZ = abs(diffZ);
+
+	//check its close enough to the point
+	if (absX < 0.1f && absZ < 0.1f && mod)
+	{
+		//change back to patrol
+		coreData->myAgents.state[a] = PATROL;
 	}
 
 }
@@ -737,8 +757,11 @@ __global__ void cudaFSMSplit(CopyOnce* coreData, CopyEachFrame* updateData, shor
 }
 
 __global__ void cudaRunPatrol(CopyOnce* coreData, CopyEachFrame* updateData, short* agentsPartitions, short* partitionsPlayers, float msec) {
+	int a = blockIdx.x * blockDim.x + threadIdx.x;
 	cudaPatrolState(coreData, updateData, agentsPartitions, partitionsPlayers, msec);
 	cudaPatrolTransitions(coreData, updateData, agentsPartitions, partitionsPlayers, msec);
+
+
 }
 
 __global__ void cudaRunStare(CopyOnce* coreData, CopyEachFrame* updateData, short* agentsPartitions, short* partitionsPlayers, float msec) {
@@ -763,6 +786,10 @@ __global__ void cudaRunLeash(CopyOnce* coreData, CopyEachFrame* updateData, floa
 	int count = coreData->myAgents.stateCount[0] + coreData->myAgents.stateCount[1] + coreData->myAgents.stateCount[2] + coreData->myAgents.stateCount[3];
 	cudaLeashBackState(coreData, updateData, msec, count);
 	cudaLeashBackTransitions(coreData, updateData, msec, count);
+}
+
+__global__ void cudaRunReduce(CopyOnce* coreData, CopyEachFrame* updateData, float msec) {
+	cudaReduceCooldowns(coreData, msec);
 }
 
 #pragma endregion
@@ -2013,6 +2040,15 @@ cudaError_t cudaGPUSort(CopyOnce* coreData, CopyEachFrame* updateData, const uns
 
 		cudaRunLeash<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, msec);
 	}
+
+	//get the mingrid and blocksize
+	cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, cudaRunReduce, 0, agentCount);
+
+	// Round up according to array size 
+	gridSize = (agentCount + blockSize - 1) / blockSize;
+
+	// Launch a kernel on the GPU with one thread for each element.
+	cudaRunReduce<<<gridSize, blockSize>>>(AIManager::GetInstance()->d_coreData, AIManager::GetInstance()->d_updateData, msec);
 
 	// Check for any errors launching the kernel
 	cudaStatus = cudaGetLastError();
