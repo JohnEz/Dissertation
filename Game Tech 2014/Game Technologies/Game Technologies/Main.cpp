@@ -33,6 +33,8 @@ _-_-_-_-_-_-_-""  ""
 
 #pragma comment(lib, "nclgl.lib")
 
+#define PerformanceTest
+
 int Quit(bool pause = false, const string &reason = "") {
 	PhysicsSystem::Destroy();
 	Window::Destroy();
@@ -81,8 +83,12 @@ int main() {
 	bool running = true;
 	std::thread physics(physicsLoop, game, std::ref(running));
 
-	while(Window::GetWindow().UpdateWindow() && !Window::GetKeyboard()->KeyDown(KEYBOARD_ESCAPE)){
+	float timer = 0;
+
+	while(Window::GetWindow().UpdateWindow() && !Window::GetKeyboard()->KeyDown(KEYBOARD_ESCAPE) && timer < 40000){
 		float msec = Window::GetWindow().GetTimer()->GetTimedMS();	//How many milliseconds since last update?
+		timer += msec;
+
 
 		game->UpdateRendering(msec);	//Update our renderer
 		game->UpdateGame(msec);		//Update our game logic
@@ -92,6 +98,15 @@ int main() {
 	physics.join();
 
 	AIManager::GetInstance()->dismantleCuda();
+
+	system("cls");
+
+	cout << "Agents: " << Performance::GetInstance()->getScore() << "\n";
+	cout << "Average Updates: " << Performance::GetInstance()->getAveragePPS() << "\n";
+	cout << "Max Updates: " << Performance::GetInstance()->getMaxPPS() << "\n";
+	cout << "Min Updates: " << Performance::GetInstance()->getMinPPS() << "\n";
+
+	system("pause");
 
 	return Quit();
 }

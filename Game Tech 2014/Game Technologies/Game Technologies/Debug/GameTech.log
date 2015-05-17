@@ -1,22 +1,22 @@
-﻿Build started 15/05/2015 22:00:46.
+﻿Build started 17/05/2015 18:59:49.
      1>Project "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\GameTech.vcxproj" on node 2 (Build target(s)).
        Project file contains ToolsVersion="12.0". This toolset may be unknown or missing, in which case you may be able to resolve this by installing the appropriate version of MSBuild, or the build may have been forced to a particular ToolsVersion for policy reasons. Treating the project as if it had ToolsVersion="4.0". For more information, please see http://go.microsoft.com/fwlink/?LinkId=291333.
      1>AddCudaCompileDeps:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D_MBCS /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\bin" /I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" /I. /FIcuda_runtime.h /c "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\kernal.cu" 
        CudaBuild:
          Compiling CUDA source file kernal.cu...
-         cmd.exe /C "C:\Users\B1030516\AppData\Local\Temp\tmp49832a883e504c11a7985138429bd9b2.cmd"
+         cmd.exe /C "C:\Users\B1030516\AppData\Local\Temp\tmp5fd3d9263f214cb1811987bd48aae249.cmd"
          "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\bin\nvcc.exe" -gencode=arch=compute_20,code=\"sm_20,compute_20\" --use-local-env --cl-version 2012 -ccbin "C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin"  -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include"  -G   --keep-dir Debug -maxrregcount=0  --machine 32 --compile -cudart static  -g   -D_MBCS -Xcompiler "/EHsc /W3 /nologo /Od /Zi /RTC1 /MDd  " -o Debug\kernal.cu.obj "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\kernal.cu"
          
          D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\bin\nvcc.exe" -gencode=arch=compute_20,code=\"sm_20,compute_20\" --use-local-env --cl-version 2012 -ccbin "C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin"  -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\include"  -G   --keep-dir Debug -maxrregcount=0  --machine 32 --compile -cudart static  -g   -D_MBCS -Xcompiler "/EHsc /W3 /nologo /Od /Zi /RTC1 /MDd  " -o Debug\kernal.cu.obj "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\kernal.cu" 
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(723): warning : variable "count" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(2768): warning : variable "count" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(2801): warning : variable "d_index" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(723): warning : variable "count" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(2768): warning : variable "count" was declared but never referenced
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(2801): warning : variable "d_index" was declared but never referenced
+     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(802): warning : variable "a" was declared but never referenced
+     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(3083): warning : variable "count" was declared but never referenced
+     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(3116): warning : variable "d_index" was declared but never referenced
+     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(802): warning : variable "a" was declared but never referenced
+     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(3083): warning : variable "count" was declared but never referenced
+     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(3116): warning : variable "d_index" was declared but never referenced
          kernal.cu
-     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(2768): warning C4101: 'count' : unreferenced local variable
+     1>D:/Storage/Work/Dissertation/Dissertation/Game Tech 2014/Game Technologies/Game Technologies/kernal.cu(3083): warning C4101: 'count' : unreferenced local variable
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\GameTech.exe" /INCREMENTAL /NOLOGO /LIBPATH:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v6.5\lib\Win32" cudart.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\GameTech.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\GameTech.lib" /MACHINE:X86 Debug\kernal.cu.obj
          Debug\AIManager.obj
@@ -34,29 +34,9 @@
          Debug\Renderer.obj
          Debug\Spring.obj
          Debug\TextMesh.obj
-     1>ExtendingMesh.obj : warning LNK4049: locally defined symbol ___glewActiveTexture imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewActiveTexture imported
-     1>ExtendingMesh.obj : warning LNK4049: locally defined symbol ___glewBindVertexArray imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewDrawBuffers imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewGetUniformLocation imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewUniform1i imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewUniform2f imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewUniform3fv imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewUniform4fv imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewUniformMatrix4fv imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewUseProgram imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewBindFramebuffer imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewCheckFramebufferStatus imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewFramebufferTexture2D imported
-     1>Renderer.obj : warning LNK4049: locally defined symbol ___glewGenFramebuffers imported
-     1>glew32.lib(glew.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'glew32.lib(glew.obj)' or at 'D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\vc120.pdb'; linking object as if no debug info
-     1>SOIL.lib(image_DXT.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'SOIL.lib(image_DXT.obj)' or at 'D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\vc120.pdb'; linking object as if no debug info
-     1>SOIL.lib(image_helper.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'SOIL.lib(image_helper.obj)' or at 'D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\vc120.pdb'; linking object as if no debug info
-     1>SOIL.lib(SOIL.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'SOIL.lib(SOIL.obj)' or at 'D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\vc120.pdb'; linking object as if no debug info
-     1>SOIL.lib(stb_image_aug.obj) : warning LNK4099: PDB 'vc120.pdb' was not found with 'SOIL.lib(stb_image_aug.obj)' or at 'D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\vc120.pdb'; linking object as if no debug info
          GameTech.vcxproj -> D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Debug\GameTech.exe
      1>Done Building Project "D:\Storage\Work\Dissertation\Dissertation\Game Tech 2014\Game Technologies\Game Technologies\GameTech.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:11.57
+Time Elapsed 00:00:12.32

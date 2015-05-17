@@ -7,18 +7,6 @@ void (*states[MAX_STATES]) (int* a, CopyOnce* coreData, CopyEachFrame* updateDat
 
 AIManager* AIManager::aiInst = 0;
 
-//#define NO_AI
-//#define BASICCPU
-//#define BASICGPU
-//#define LESS_DATA_GPU
-//#define GPU_OLD_BROAD
-#define GPU_NEW_BROAD
-//#define GPU_BROAD_AGENTS
-//#define SPLIT_GPU
-//#define SPLIT_GPU_BROAD
-//#define DEBUG
-
-
 AIWorldPartition createWorldPartitions(int xNum, int yNum, int zNum, float height, float width, float depth, const Vector3 halfDim)
 {
 	//get position locations
@@ -458,7 +446,7 @@ void AIManager::Broadphase()
 
 void AIManager::setupCuda()
 {
-#if !defined (BASICCPU) && !defined (BASICGPU) && !defined (NO_AI) && !defined (DEBUG)
+#if !defined (BASICCPU) && !defined (BASICGPU) && !defined (NO_AI) && !defined (SORT_SPLIT)
 	d_coreData = 0;
 
 	cudaCopyCore(&coreData);
@@ -539,6 +527,7 @@ void AIManager::update(float msec)
 
 	}
 
+cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 #if defined (BASICGPU)
 	cudaGPUBasic(&coreData, &updateData, agentCount, partitionCount, msec);
 #elif defined (LESS_DATA_GPU)
@@ -559,15 +548,13 @@ void AIManager::update(float msec)
 #elif defined (SPLIT_GPU_BROAD)
 	cudaGPUSplit(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
-#elif defined (DEBUG)
+#elif defined (SORT_SPLIT)
 	memset(updateData.agentPartitions, -1, (Agents::MAXAGENTS*8) * sizeof(short));
 	memset(coreData.myAgents.stateCount, 0, MAX_STATES * sizeof(int));
 	cudaGPUSort(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
 	clearCoreData();
 #endif
-	//cudaRunKernalBase(&coreData, &updateData, agentCount, partitionCount, msec, true);
-	//copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
 	
 }
 

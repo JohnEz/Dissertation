@@ -4,6 +4,17 @@
 #ifndef AIMANAGER
 #define AIMANAGER
 
+//#define NO_AI
+//#define BASICCPU
+//#define BASICGPU
+//#define LESS_DATA_GPU
+//#define GPU_OLD_BROAD
+//#define GPU_NEW_BROAD
+//#define GPU_BROAD_AGENTS
+//#define SPLIT_GPU
+//#define SPLIT_GPU_BROAD
+#define SORT_SPLIT
+
 enum State {
 	PATROL,
 	STARE_AT_PLAYER,
@@ -50,7 +61,7 @@ struct AgentAbilities {
 };
 
 struct Agents {
-	static const int MAXAGENTS = 1024 * 40;
+	static const int MAXAGENTS = 1024 * 1;
 	static const int AGGRORANGE = 500;
 
 	State state[MAXAGENTS];
