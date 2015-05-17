@@ -12,11 +12,11 @@ AIManager* AIManager::aiInst = 0;
 //#define BASICGPU
 //#define LESS_DATA_GPU
 //#define GPU_OLD_BROAD
-//#define GPU_NEW_BROAD
+#define GPU_NEW_BROAD
 //#define GPU_BROAD_AGENTS
 //#define SPLIT_GPU
 //#define SPLIT_GPU_BROAD
-#define DEBUG
+//#define DEBUG
 
 
 AIWorldPartition createWorldPartitions(int xNum, int yNum, int zNum, float height, float width, float depth, const Vector3 halfDim)

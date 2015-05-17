@@ -1353,6 +1353,11 @@ cudaError_t cudaGPUBroad(CopyOnce* coreData, CopyEachFrame* updateData, const un
 	}
 
 
+	//cudaDeviceSetCacheConfig(cudaFuncCachePreferNone); // basic (set auto)
+	cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+	//cudaDeviceSetCacheConfig(cudaFuncCachePreferShared);
+	//cudaDeviceSetCacheConfig(cudaFuncCachePreferEqual);
+
 	//run the broadphase on the gpu
 	if (runBroad)
 	{
