@@ -168,7 +168,7 @@ void stareAtPlayer(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float 
 				Vector3 diffNew = playerPos - Vector3(coreData->myAgents.x[*a], coreData->myAgents.y[*a], coreData->myAgents.z[*a]);
 				float distNew = sqrtf(Vector3::Dot(diffNew, diffNew));
 
-				// if the new distance is less switch targte
+				// if the new distance is less switch targee
 				if (distNew <= dist  && !updateData->playerIsDead[p2])
 				{
 					coreData->myAgents.targetPlayer[*a] = p2;
@@ -186,7 +186,7 @@ void stareAtPlayer(int* a, CopyOnce* coreData, CopyEachFrame* updateData, float 
 		}
 
 		// if there are no close players at all
-		if (!playerClose)
+		if (!playerClose && dist > aggroRange)
 		{
 			coreData->myAgents.waitedTime[*a] = 0.0f;
 			coreData->myAgents.state[*a] = PATROL;
@@ -549,7 +549,6 @@ cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
 	cudaGPUSplit(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
 #elif defined (SORT_SPLIT)
-	memset(updateData.agentPartitions, -1, (Agents::MAXAGENTS*8) * sizeof(short));
 	memset(coreData.myAgents.stateCount, 0, MAX_STATES * sizeof(int));
 	cudaGPUSort(&coreData, &updateData, agentCount, partitionCount, msec, true);
 	copyDataFromGPU(&coreData, &updateData, agentCount, partitionCount, msec);
@@ -588,6 +587,8 @@ void AIManager::addAgent(PhysicsNode* a)
 
 	coreData.myAgents.targetLocation[agentCount] = 0;
 
+	coreData.myAgents.level[agentCount] = 100;
+
 	coreData.myAgents.patrolLocation[agentCount].loc[0] = a->GetPosition();	// start patrol
 	coreData.myAgents.patrolLocation[agentCount].loc[1] = GenerateTargetLocation(a->GetPosition());	// end patrol
 	coreData.myAgents.patrolLocation[agentCount].loc[2] = Vector3(0, 0, 0);							// store location
@@ -601,8 +602,6 @@ void AIManager::addAgent(PhysicsNode* a)
 	coreData.myAgents.myAbilities[agentCount].abil[0] = agentAbilities[0];
 	coreData.myAgents.myAbilities[agentCount].abil[1] = agentAbilities[1];
 	coreData.myAgents.myAbilities[agentCount].abil[2] = agentAbilities[4];
-
-	coreData.myAgents.level[agentCount] = agentCount; //(rand() % 100) + 1; // randomly generate level
 
 	coreData.myAgents.x[agentCount] = a->GetPosition().x; // store the x in an array
 	coreData.myAgents.y[agentCount] = a->GetPosition().y; // store the y in an array

@@ -11,9 +11,9 @@
 //#define GPU_OLD_BROAD
 //#define GPU_NEW_BROAD
 //#define GPU_BROAD_AGENTS
-//#define SPLIT_GPU
+#define SPLIT_GPU
 //#define SPLIT_GPU_BROAD
-#define SORT_SPLIT
+//#define SORT_SPLIT
 
 enum State {
 	PATROL,
@@ -61,7 +61,7 @@ struct AgentAbilities {
 };
 
 struct Agents {
-	static const int MAXAGENTS = 1024 * 1;
+	static const int MAXAGENTS = 1024 * 1000;
 	static const int AGGRORANGE = 500;
 
 	State state[MAXAGENTS];
